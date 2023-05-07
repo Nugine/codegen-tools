@@ -23,13 +23,15 @@ impl Codegen {
     }
 }
 
-impl Codegen {
-    pub fn lf(&mut self) {
-        writeln!(self.writer).unwrap();
+impl io::Write for Codegen {
+    #[inline]
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        self.writer.write(buf)
     }
 
-    pub fn ln(&mut self, line: impl AsRef<str>) {
-        writeln!(self.writer, "{}", line.as_ref()).unwrap();
+    #[inline]
+    fn flush(&mut self) -> io::Result<()> {
+        self.writer.flush()
     }
 }
 
@@ -51,30 +53,38 @@ pub fn scoped<T>(g: Codegen, f: impl FnOnce()) -> Codegen {
     })
 }
 
-pub fn with(f: impl FnOnce(&mut Codegen)) {
+pub fn with<T>(f: impl FnOnce(&mut Codegen) -> T) -> T {
     CURRENT.with(|current| {
         let mut cur = current.borrow_mut();
         let g = cur.as_mut().expect("codegen is not in scope");
-        f(g);
+        f(g)
     })
 }
 
 #[macro_export]
 macro_rules! g {
-    [$($line:expr,)+] => {
+    [$($line:expr),+] => {{
+        g![$($line,)+]
+    }};
+    [$($line:expr,)+] => {{
+        use ::std::io::Write;
         $crate::with(|g| {
             $(
-                g.ln($line);
+                let line = $line;
+                writeln!(g, "{line}").unwrap();
             )+
-        })
-    };
-    () => {
-        $crate::with(|g| g.lf())
-    };
-    ($fmt: literal) => {
-        $crate::with(|g| g.ln($fmt))
-    };
-    ($fmt: literal, $($arg: tt)*) => {
-        $crate::with(|g| g.ln(format!($fmt, $($arg)*)))
-    };
+        });
+    }};
+    () => {{
+        use ::std::io::Write;
+        $crate::with(|g| writeln!(g)).unwrap();
+    }};
+    ($fmt: literal) => {{
+        use ::std::io::Write;
+        $crate::with(|g| writeln!(g, $fmt)).unwrap();
+    }};
+    ($fmt: literal, $($arg: tt)*) => {{
+        use ::std::io::Write;
+        $crate::with(|g| writeln!(g, $fmt, $($arg)*)).unwrap();
+    }};
 }
