@@ -39,7 +39,7 @@ thread_local! {
     static CURRENT: RefCell<Option<Codegen>> = RefCell::new(None);
 }
 
-pub fn scoped<T>(g: Codegen, f: impl FnOnce()) -> Codegen {
+pub fn scoped(g: Codegen, f: impl FnOnce()) -> Codegen {
     let prev = CURRENT.with(|current| {
         let mut cur = current.borrow_mut();
         cur.replace(g)
