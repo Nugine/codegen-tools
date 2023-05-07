@@ -63,18 +63,6 @@ pub fn with<T>(f: impl FnOnce(&mut Codegen) -> T) -> T {
 
 #[macro_export]
 macro_rules! g {
-    [$($line:expr),+] => {{
-        g![$($line,)+]
-    }};
-    [$($line:expr,)+] => {{
-        use ::std::io::Write;
-        $crate::with(|g| {
-            $(
-                let line = $line;
-                writeln!(g, "{line}").unwrap();
-            )+
-        });
-    }};
     () => {{
         use ::std::io::Write;
         $crate::with(|g| writeln!(g)).unwrap();
@@ -86,5 +74,21 @@ macro_rules! g {
     ($fmt: literal, $($arg: tt)*) => {{
         use ::std::io::Write;
         $crate::with(|g| writeln!(g, $fmt, $($arg)*)).unwrap();
+    }};
+}
+
+#[macro_export]
+macro_rules! glines {
+    [$($line:expr),+] => {{
+        g![$($line,)+]
+    }};
+    [$($line:expr,)+] => {{
+        use ::std::io::Write;
+        $crate::with(|g| {
+            $(
+                let line = $line;
+                writeln!(g, "{line}").unwrap();
+            )+
+        });
     }};
 }
