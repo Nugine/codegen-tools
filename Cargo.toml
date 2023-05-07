@@ -1,0 +1,5 @@
+[package]
+name = "codegen-tools"
+version = "0.1.0-dev"
+edition = "2021"
+publish = false
