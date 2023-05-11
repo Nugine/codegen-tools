@@ -157,7 +157,7 @@ fn generate_cfg_expr(mod_path: &Utf8Path, item_name: &str) -> Expr {
     expr(all(conds))
 }
 
-pub fn generate_item_cfg(item: &Item) -> Cfg {
+pub fn generate_item_cfg(item: &Item) -> Expr {
     let conds = map_collect_vec(&item.mod_paths, |mod_path| generate_cfg_expr(mod_path, &item.name));
-    simplified_cfg(any(conds))
+    simplified_expr(any(conds))
 }

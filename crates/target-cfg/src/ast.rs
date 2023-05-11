@@ -1,8 +1,5 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Cfg(pub Expr);
-
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Expr {
@@ -30,10 +27,6 @@ pub enum Pred {
     TargetOs(String),
     TargetEnv(String),
     TargetPointerWidth(String),
-}
-
-pub fn cfg(x: impl Into<Cfg>) -> Cfg {
-    x.into()
 }
 
 pub fn expr(x: impl Into<Expr>) -> Expr {
@@ -95,36 +88,6 @@ pub fn target_env(s: impl Into<String>) -> Pred {
 
 pub fn target_pointer_width(s: impl Into<String>) -> Pred {
     Pred::TargetPointerWidth(s.into())
-}
-
-impl From<Expr> for Cfg {
-    fn from(expr: Expr) -> Self {
-        Self(expr)
-    }
-}
-
-impl From<Pred> for Cfg {
-    fn from(pred: Pred) -> Self {
-        Self(Expr::from(pred))
-    }
-}
-
-impl From<Any> for Cfg {
-    fn from(value: Any) -> Self {
-        Self(Expr::from(value))
-    }
-}
-
-impl From<All> for Cfg {
-    fn from(value: All) -> Self {
-        Self(Expr::from(value))
-    }
-}
-
-impl From<Not> for Cfg {
-    fn from(value: Not) -> Self {
-        Self(Expr::from(value))
-    }
 }
 
 impl From<Pred> for Expr {

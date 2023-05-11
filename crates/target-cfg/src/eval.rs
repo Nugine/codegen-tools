@@ -6,9 +6,9 @@ use std::collections::BTreeSet;
 
 use itertools::Itertools;
 
-pub fn simplified_cfg(x: impl Into<Cfg>) -> Cfg {
+pub fn simplified_expr(x: impl Into<Expr>) -> Expr {
     let mut x = x.into();
-    simplify(&mut x.0);
+    simplify(&mut x);
     x
 }
 
