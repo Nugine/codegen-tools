@@ -7,5 +7,12 @@ doc:
     cargo doc --open --no-deps
 
 sync-version:
-    cargo set-version -p codegen-writer  0.1.0-dev
+    cargo set-version -p codegen-writer 0.1.0-dev
     cargo set-version -p target-cfg     0.1.0-dev
+    cargo set-version -p libc-cfg       0.1.0-dev
+
+libc-cfg *ARGS:
+    #!/bin/bash -e
+    cd {{ justfile_directory() }}
+    ./scripts/download-libc.sh
+    cargo run -p libc-cfg --release -- --libc temp/libc --cache temp/libc-cfg.json {{ ARGS }}
