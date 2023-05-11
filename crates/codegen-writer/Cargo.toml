@@ -1,5 +1,5 @@
 [package]
-name = "codegen-tools"
+name = "codegen-writer"
 version = "0.1.0-dev"
 edition = "2021"
 publish = false
