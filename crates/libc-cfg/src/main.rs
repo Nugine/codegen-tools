@@ -92,12 +92,10 @@ fn load_item_names(src: &SourceFile) -> Result<Vec<String>> {
 struct Item {
     name: String,
     mod_paths: BTreeSet<Utf8PathBuf>,
-    any: Vec<Expr>,
 }
 
 fn generate_item_list(libc_repo_path: impl AsRef<Utf8Path>) -> Result<Vec<Item>> {
     let mut map: HashMap<String, Item> = default();
-
     let src_list = load_src_list(libc_repo_path)?;
 
     for src in src_list {
@@ -105,17 +103,11 @@ fn generate_item_list(libc_repo_path: impl AsRef<Utf8Path>) -> Result<Vec<Item>>
 
         for name in item_list {
             let item = map.entry(name.clone()).or_insert_with(|| Item {
-                name: name.clone(),
+                name,
                 mod_paths: default(),
-                any: default(),
             });
 
-            let is_new_mod_path = item.mod_paths.insert(src.mod_path.clone());
-
-            if is_new_mod_path {
-                let expr = generate_cfg_expr(&src.mod_path, &name);
-                item.any.push(expr);
-            }
+            item.mod_paths.insert(src.mod_path.clone());
         }
     }
 
@@ -163,21 +155,18 @@ fn generate_cfg_expr(mod_path: &Utf8Path, item_name: &str) -> Expr {
         unimplemented!("empty conditions")
     }
 
-    let mut ans = expr(all(conds));
-    target_cfg::simplify(&mut ans);
-    ans
+    expr(all(conds))
+}
+
+fn generate_item_cfg(item: &Item) -> Cfg {
+    let conds = map_collect_vec(&item.mod_paths, |mod_path| generate_cfg_expr(mod_path, &item.name));
+    simplified_cfg(any(conds))
 }
 
 #[derive(clap::Parser)]
 struct Opt {
     #[clap(long)]
     libc: Utf8PathBuf,
-
-    #[clap(long)]
-    cache: Utf8PathBuf,
-
-    #[clap(long)]
-    force: bool,
 
     filters: Vec<String>,
 }
@@ -187,37 +176,15 @@ fn main() -> Result<()> {
     let opt = Opt::parse();
 
     let libc_repo_path = &opt.libc;
-    let cache_path = &opt.cache;
-
-    anyhow::ensure!(matches!(cache_path.extension(), Some("json") | Some("bin")));
 
     let re = RegexSet::new(&opt.filters)?;
 
-    let item_list = if opt.force || cache_path.exists().not() {
-        let item_list = generate_item_list(libc_repo_path)?;
-
-        let ext = cache_path.extension().unwrap();
-        if ext == "json" {
-            write_json(cache_path, &item_list)?;
-        } else {
-            write_bincode(cache_path, &item_list)?;
-        }
-
-        item_list
-    } else {
-        let ext = cache_path.extension().unwrap();
-
-        if ext == "json" {
-            read_json(cache_path)?
-        } else {
-            read_bincode(cache_path)?
-        }
-    };
+    let item_list = generate_item_list(libc_repo_path)?;
 
     for item in &item_list {
         let name = item.name.as_str();
         if re.is_match(name) {
-            let cfg = cfg(any(item.any.clone()));
+            let cfg = generate_item_cfg(item);
             println!("#[{cfg}]\npub use libc::{name};\n");
         }
     }

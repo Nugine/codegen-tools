@@ -15,4 +15,4 @@ libc-cfg *ARGS:
     #!/bin/bash -e
     cd {{ justfile_directory() }}
     ./scripts/download-libc.sh
-    cargo run -p libc-cfg --release -- --libc temp/libc --cache temp/libc-cfg.json {{ ARGS }}
+    cargo run -p libc-cfg --release -- --libc temp/libc {{ ARGS }}
