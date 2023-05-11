@@ -153,14 +153,12 @@ impl From<Not> for Expr {
 
 impl From<Vec<Expr>> for Any {
     fn from(list: Vec<Expr>) -> Self {
-        assert!(!list.is_empty());
         Self(list)
     }
 }
 
 impl From<Vec<Expr>> for All {
     fn from(list: Vec<Expr>) -> Self {
-        assert!(!list.is_empty());
         Self(list)
     }
 }

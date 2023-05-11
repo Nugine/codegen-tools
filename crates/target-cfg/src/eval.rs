@@ -1,7 +1,14 @@
 use crate::ast::*;
 
+pub fn simplified_cfg(x: impl Into<Cfg>) -> Cfg {
+    let mut x = x.into();
+    simplify(&mut x.0);
+    x
+}
+
 pub fn simplify(expr: &mut Expr) {
     visit_preorder(expr, &mut PredListSingleElement);
+    visit_preorder(expr, &mut PredListPromote);
 }
 
 trait Visitor {
@@ -58,5 +65,33 @@ impl Visitor for PredListSingleElement {
             let single = vec.pop().unwrap();
             *x = single;
         }
+    }
+}
+
+struct PredListPromote;
+
+impl Visitor for PredListPromote {
+    fn visit_all(&mut self, All(all): &mut All) {
+        let mut buf = Vec::with_capacity(all.len());
+        for x in all.drain(..) {
+            if let Expr::All(All(v)) = x {
+                buf.extend(v);
+            } else {
+                buf.push(x);
+            }
+        }
+        *all = buf
+    }
+
+    fn visit_any(&mut self, Any(any): &mut Any) {
+        let mut buf = Vec::with_capacity(any.len());
+        for x in any.drain(..) {
+            if let Expr::Any(Any(v)) = x {
+                buf.extend(v);
+            } else {
+                buf.push(x);
+            }
+        }
+        *any = buf
     }
 }
