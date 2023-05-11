@@ -1,4 +1,10 @@
 use crate::ast::*;
+use crate::utils::*;
+
+use std::cmp::Ordering::*;
+use std::collections::BTreeSet;
+
+use itertools::Itertools;
 
 pub fn simplified_cfg(x: impl Into<Cfg>) -> Cfg {
     let mut x = x.into();
@@ -7,18 +13,24 @@ pub fn simplified_cfg(x: impl Into<Cfg>) -> Cfg {
 }
 
 pub fn simplify(expr: &mut Expr) {
-    visit_preorder(expr, &mut PredListSingleElement);
-    visit_preorder(expr, &mut PredListPromote);
+    visit_preorder(expr, &mut FlattenSingleElement);
+    visit_preorder(expr, &mut FlattenNestedPredList);
+    visit_preorder(expr, &mut SimplifyAllOfAny);
+    visit_preorder(expr, &mut FlattenSingleElement);
+    visit_preorder(expr, &mut SortByPriority);
+    visit_preorder(expr, &mut SortTargetOs);
+    visit_preorder(expr, &mut IntersectAllAnyTargetOs);
+    visit_preorder(expr, &mut FlattenNestedPredList);
 }
 
 trait Visitor {
     fn visit_expr(&mut self, _x: &mut Expr) {}
 
-    fn visit_all(&mut self, _all: &mut All) {}
+    fn visit_all(&mut self, All(_all): &mut All) {}
 
-    fn visit_any(&mut self, _any: &mut Any) {}
+    fn visit_any(&mut self, Any(_any): &mut Any) {}
 
-    fn visit_not(&mut self, _not: &mut Not) {}
+    fn visit_not(&mut self, Not(_not): &mut Not) {}
 
     fn visit_pred(&mut self, _pred: &mut Pred) {}
 }
@@ -52,9 +64,9 @@ where
     }
 }
 
-struct PredListSingleElement;
+struct FlattenSingleElement;
 
-impl Visitor for PredListSingleElement {
+impl Visitor for FlattenSingleElement {
     fn visit_expr(&mut self, x: &mut Expr) {
         let vec = match x {
             Expr::Any(Any(v)) => v,
@@ -68,9 +80,9 @@ impl Visitor for PredListSingleElement {
     }
 }
 
-struct PredListPromote;
+struct FlattenNestedPredList;
 
-impl Visitor for PredListPromote {
+impl Visitor for FlattenNestedPredList {
     fn visit_all(&mut self, All(all): &mut All) {
         let mut buf = Vec::with_capacity(all.len());
         for x in all.drain(..) {
@@ -93,5 +105,113 @@ impl Visitor for PredListPromote {
             }
         }
         *any = buf
+    }
+}
+
+struct SimplifyAllOfAny;
+
+impl Visitor for SimplifyAllOfAny {
+    fn visit_all(&mut self, All(all): &mut All) {
+        let mut i = 0;
+        while i < all.len() {
+            if let Expr::Any(Any(any)) = &all[i] {
+                let has_same = any.iter().cartesian_product(all.iter()).any(|(x, y)| x == y);
+                if has_same {
+                    all.remove(i);
+                    continue;
+                }
+            }
+            i += 1;
+        }
+    }
+}
+
+struct SortByPriority;
+
+impl SortByPriority {
+    fn sort(es: &mut [Expr]) {
+        es.sort_by_key(|x| match x {
+            Expr::Not(_) => 101,
+            Expr::Any(_) => 102,
+            Expr::All(_) => 103,
+            Expr::Atom(pred) => match pred {
+                Pred::TargetFamily(_) => 1,
+                Pred::TargetArch(_) => 2,
+                Pred::TargetVendor(_) => 3,
+                Pred::TargetOs(_) => 4,
+                Pred::TargetEnv(_) => 5,
+                Pred::TargetPointerWidth(_) => 6,
+            },
+        })
+    }
+}
+
+impl Visitor for SortByPriority {
+    fn visit_all(&mut self, All(all): &mut All) {
+        Self::sort(all)
+    }
+
+    fn visit_any(&mut self, Any(any): &mut Any) {
+        Self::sort(any)
+    }
+}
+
+struct SortTargetOs;
+
+impl SortTargetOs {
+    fn sort(es: &mut [Expr]) {
+        es.sort_by(|lhs, rhs| {
+            let Expr::Atom(Pred::TargetOs(lhs)) = lhs else { return Equal };
+            let Expr::Atom(Pred::TargetOs(rhs)) = rhs else { return Equal };
+            lhs.cmp(rhs)
+        })
+    }
+}
+
+impl Visitor for SortTargetOs {
+    fn visit_all(&mut self, All(all): &mut All) {
+        Self::sort(all)
+    }
+
+    fn visit_any(&mut self, Any(any): &mut Any) {
+        Self::sort(any)
+    }
+}
+
+struct IntersectAllAnyTargetOs;
+
+impl IntersectAllAnyTargetOs {
+    fn is_any_of_target_os(x: &Expr) -> bool {
+        let Expr::Any(Any(any)) = x else { return false };
+        any.iter().all(|x| matches!(x, Expr::Atom(Pred::TargetOs(_))))
+    }
+
+    fn to_target_os_set(x: &Expr) -> BTreeSet<&str> {
+        let Expr::Any(Any(any)) = x else { panic!() };
+        map_collect(any, |x: &Expr| {
+            let Expr::Atom(Pred::TargetOs(os)) = x else { panic!() };
+            os.as_str()
+        })
+    }
+}
+
+impl Visitor for IntersectAllAnyTargetOs {
+    fn visit_expr(&mut self, x: &mut Expr) {
+        let Expr::All(All(all)) = x else {return};
+
+        if !all.iter().all(Self::is_any_of_target_os) {
+            return;
+        }
+
+        let [first, xs @.. ] = all.as_slice() else {return};
+
+        let mut final_set = Self::to_target_os_set(first);
+
+        for x in xs {
+            let os_set = Self::to_target_os_set(x);
+            final_set = final_set.intersection(&os_set).cloned().collect();
+        }
+
+        *x = expr(any(map_collect_vec(final_set, |os| expr(target_os(os)))));
     }
 }
