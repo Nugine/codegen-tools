@@ -1,6 +1,8 @@
 mod cfg_transform;
 mod rules;
 
+pub use self::cfg_transform::simplified_expr;
+
 use codegen_cfg::ast::*;
 
 use std::collections::{BTreeSet, HashMap};
@@ -158,5 +160,5 @@ fn generate_cfg_expr(mod_path: &Utf8Path, item_name: &str) -> Expr {
 
 pub fn generate_item_cfg(item: &Item) -> Expr {
     let conds = map_collect_vec(&item.mod_paths, |mod_path| generate_cfg_expr(mod_path, &item.name));
-    crate::cfg_transform::simplified_expr(any(conds))
+    simplified_expr(any(conds))
 }

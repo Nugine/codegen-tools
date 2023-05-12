@@ -175,3 +175,34 @@ impl Visitor for SortTargetOs {
         Self::sort(any)
     }
 }
+
+/// Simplify `all(not(any(...)), any(...))`
+pub struct CounteractAllNotAny;
+
+impl CounteractAllNotAny {
+    fn match_pattern(e: &mut Expr) -> Option<(&mut Vec<Expr>, &mut Vec<Expr>)> {
+        if let Expr::All(All(all)) = e {
+            if let [Expr::Not(Not(not)), Expr::Any(Any(pos))] = all.as_mut_slice() {
+                if let Expr::Any(Any(neg)) = &mut **not {
+                    return Some((neg, pos));
+                }
+            }
+        }
+        None
+    }
+}
+
+impl Visitor for CounteractAllNotAny {
+    fn visit_expr(&mut self, expr: &mut Expr) {
+        let Some((neg, pos)) = Self::match_pattern(expr) else {return};
+
+        let mut i = 0;
+        while i < pos.len() {
+            if neg.contains(&pos[i]) {
+                pos.remove(i);
+            } else {
+                i += 1;
+            }
+        }
+    }
+}
