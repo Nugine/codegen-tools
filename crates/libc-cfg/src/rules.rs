@@ -1,10 +1,10 @@
-use crate::utils::*;
-
-use target_cfg::*;
+use codegen_cfg::ast::*;
 
 use std::collections::HashMap;
 
 use once_cell::sync::Lazy;
+use rust_utils::default_with;
+use rust_utils::map_collect_vec;
 
 pub static PROMOTE_MODS: &[&str] = &[
     "align",          // rustc >= 1.25
@@ -25,23 +25,17 @@ pub static PROMOTE_MODS: &[&str] = &[
 
 type Rules = HashMap<String, Expr>;
 
-fn build<T: Default>(f: impl FnOnce(&mut T)) -> T {
-    let mut ans = T::default();
-    f(&mut ans);
-    ans
-}
-
 pub static MATCH_ALL: Lazy<Rules> = Lazy::new(|| {
-    build::<Rules>(|ans| {
+    default_with::<Rules>(|ans| {
         let mut add = |mod_path: &str, expr: Expr| assert!(ans.insert(mod_path.to_owned(), expr).is_none());
 
         for s in ["unix", "windows", "wasm"] {
             add(s, expr(target_family(s)));
         }
 
-        add("sgx", expr(all!(target_env("sgx"), target_vendor("fortanix"))));
+        add("sgx", expr(all((target_env("sgx"), target_vendor("fortanix")))));
 
-        add("wasi", expr(any!(target_env("wasi"), target_os("wasi"))));
+        add("wasi", expr(any((target_env("wasi"), target_os("wasi")))));
     })
 });
 
@@ -94,7 +88,7 @@ static ARCH_LIST: &[&str] = &[
 static ENV_LIST: &[&str] = &["gnu", "msvc", "musl", "newlib", "uclibc"];
 
 pub static MATCH_COMPONENT: Lazy<Rules> = Lazy::new(|| {
-    build::<Rules>(|ans| {
+    default_with::<Rules>(|ans| {
         let mut add = |comp: &str, expr: Expr| assert!(ans.insert(comp.to_owned(), expr).is_none());
 
         {
@@ -117,7 +111,7 @@ pub static MATCH_COMPONENT: Lazy<Rules> = Lazy::new(|| {
             }
 
             add("mips32", expr(target_arch("mips")));
-            add("x86_common", expr(any!(target_arch("x86"), target_arch("x86_64"))));
+            add("x86_common", expr(any((target_arch("x86"), target_arch("x86_64")))));
         }
 
         {
@@ -174,6 +168,6 @@ pub static MATCH_COMPONENT: Lazy<Rules> = Lazy::new(|| {
     })
 });
 
-fn any_target_os(s: &[&str]) -> Expr {
-    expr(any(map_collect_vec(s, |&s| expr(target_os(s)))))
+fn any_target_os(os_list: &[&str]) -> Expr {
+    expr(any(map_collect_vec(os_list, |&s| expr(target_os(s)))))
 }

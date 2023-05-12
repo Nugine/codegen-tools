@@ -1,9 +1,0 @@
-[package]
-name = "target-cfg"
-version = "0.1.0-dev"
-edition = "2021"
-publish = false
-
-[dependencies]
-itertools = "0.10.5"
-serde = { version = "1.0.163", features = ["derive"] }

@@ -1,9 +1,7 @@
-mod utils;
-use self::utils::*;
-
+mod cfg_transform;
 mod rules;
 
-use target_cfg::*;
+use codegen_cfg::ast::*;
 
 use std::collections::{BTreeSet, HashMap};
 use std::fs;
@@ -13,6 +11,7 @@ use anyhow::Result;
 use camino::{Utf8Path, Utf8PathBuf};
 use log::error;
 use regex::Regex;
+use rust_utils::{default, map_collect_vec};
 use serde::{Deserialize, Serialize};
 use walkdir::WalkDir;
 
@@ -159,5 +158,5 @@ fn generate_cfg_expr(mod_path: &Utf8Path, item_name: &str) -> Expr {
 
 pub fn generate_item_cfg(item: &Item) -> Expr {
     let conds = map_collect_vec(&item.mod_paths, |mod_path| generate_cfg_expr(mod_path, &item.name));
-    simplified_expr(any(conds))
+    crate::cfg_transform::simplified_expr(any(conds))
 }
