@@ -7,10 +7,12 @@ pub fn simplified_expr(x: impl Into<Expr>) -> Expr {
 
     visit_preorder(&mut x, &mut FlattenSingleElement);
     visit_preorder(&mut x, &mut FlattenNestedList);
+    visit_preorder(&mut x, &mut ListDedup);
     visit_preorder(&mut x, &mut SimplifyAllOfAny);
     visit_preorder(&mut x, &mut FlattenSingleElement);
     visit_preorder(&mut x, &mut IntersectAllAnyTargetOs);
     visit_preorder(&mut x, &mut FlattenNestedList);
+    visit_preorder(&mut x, &mut ListDedup);
 
     visit_preorder(&mut x, &mut SortByPriority);
     visit_preorder(&mut x, &mut SortTargetOs);

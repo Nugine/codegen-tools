@@ -1,5 +1,5 @@
-use libc_cfg::generate_item_cfg;
-use libc_cfg::generate_item_list;
+use codegen_libc::generate_item_cfg;
+use codegen_libc::generate_item_list;
 
 use anyhow::Result;
 use camino::Utf8PathBuf;

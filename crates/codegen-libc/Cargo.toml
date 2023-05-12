@@ -1,12 +1,12 @@
 [package]
-name = "libc-cfg"
+name = "codegen-libc"
 version = "0.1.0-dev"
 edition = "2021"
 publish = false
 rust-version = "1.59.0"
 
 [[bin]]
-name = "libc-cfg"
+name = "codegen-libc"
 required-features = ["binary"]
 
 [features]
