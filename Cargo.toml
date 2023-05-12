@@ -1,2 +1,6 @@
 [workspace]
 members = ["crates/*"]
+
+[workspace.package]
+license = "MIT"
+repository = "https://github.com/Nugine/codegen-tools"

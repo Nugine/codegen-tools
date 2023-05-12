@@ -2,8 +2,10 @@
 name = "codegen-libc"
 version = "0.1.0-dev"
 edition = "2021"
-publish = false
 rust-version = "1.59.0"
+description = "A codegen tool for extracting libc cfg"
+license.workspace = true
+repository.workspace = true
 
 [[bin]]
 name = "codegen-libc"
@@ -26,3 +28,4 @@ nugine-rust-utils = { version = "0.1.1", features = ["std"] }
 
 [dependencies.codegen-cfg]
 path = "../codegen-cfg"
+version = "0.1.0-dev"
