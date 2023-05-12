@@ -7,9 +7,9 @@ doc:
     cargo doc --open --no-deps
 
 sync-version:
-    cargo set-version   -p codegen-writer   0.1.0
-    cargo set-version   -p codegen-cfg      0.1.0
-    cargo set-version   -p codegen-libc     0.1.0
+    cargo set-version   -p codegen-writer   0.1.1-dev
+    cargo set-version   -p codegen-cfg      0.1.1-dev
+    cargo set-version   -p codegen-libc     0.1.1-dev
 
 publish:
     cargo publish       -p codegen-writer   
