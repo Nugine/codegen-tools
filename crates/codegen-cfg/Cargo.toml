@@ -1,0 +1,10 @@
+[package]
+name = "codegen-cfg"
+version = "0.1.0-dev"
+edition = "2021"
+description = "A codegen tool for Rust `cfg` expressions"
+license = "MIT"
+
+[dependencies]
+itertools = "0.10.5"
+nugine-rust-utils = { version = "0.1.0", features = ["std"] }
