@@ -1,6 +1,6 @@
 [package]
 name = "codegen-cfg"
-version = "0.1.1-dev"
+version = "0.1.1"
 edition = "2021"
 description = "A codegen tool for Rust `cfg` expressions"
 license.workspace = true
