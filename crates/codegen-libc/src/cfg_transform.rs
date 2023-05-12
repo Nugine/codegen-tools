@@ -17,7 +17,8 @@ pub fn simplified_expr(x: impl Into<Expr>) -> Expr {
     visit_preorder(&mut x, &mut SortByPriority);
     visit_preorder(&mut x, &mut SortTargetOs);
 
-    visit_preorder(&mut x, &mut CounteractAllNotAny);
+    visit_preorder(&mut x, &mut SimplifyAllNotAny);
+    visit_preorder(&mut x, &mut SimplifyAnyOfAll);
 
     x
 }
