@@ -8,8 +8,8 @@ doc:
 
 sync-version:
     cargo set-version   -p codegen-writer   0.1.2-dev
-    cargo set-version   -p codegen-cfg      0.1.2-dev
-    cargo set-version   -p codegen-libc     0.1.2-dev
+    cargo set-version   -p codegen-cfg      0.1.2
+    cargo set-version   -p codegen-libc     0.1.2
 
 publish:
     cargo publish       -p codegen-writer   
