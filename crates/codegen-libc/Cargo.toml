@@ -1,6 +1,6 @@
 [package]
 name = "codegen-libc"
-version = "0.1.1"
+version = "0.1.2-dev"
 edition = "2021"
 rust-version = "1.59.0"
 description = "A codegen tool for extracting libc cfg"
@@ -28,4 +28,4 @@ nugine-rust-utils = { version = "0.1.1", features = ["std"] }
 
 [dependencies.codegen-cfg]
 path = "../codegen-cfg"
-version = "0.1.1"
+version = "0.1.2-dev"
