@@ -1,7 +1,7 @@
-mod cfg_transform;
 mod rules;
+mod transform;
 
-pub use self::cfg_transform::simplified_expr;
+pub use self::transform::simplified_expr;
 
 use codegen_cfg::ast::*;
 

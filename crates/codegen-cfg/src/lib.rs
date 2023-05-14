@@ -1,3 +1,3 @@
 pub mod ast;
-pub mod transform;
-pub mod vis;
+
+pub use bool_logic;

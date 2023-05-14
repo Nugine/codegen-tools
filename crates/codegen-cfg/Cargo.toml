@@ -7,5 +7,8 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
-itertools = "0.10.5"
-nugine-rust-utils = { version = "0.1.1", features = ["std"] }
+nugine-rust-utils = { version = "0.1.4", features = ["std"] }
+
+[dependencies.bool-logic]
+path = "../bool-logic"
+version = "0.1.3-dev"
