@@ -10,14 +10,23 @@ pub struct FlattenSingle;
 
 impl<T> VisitMut<T> for FlattenSingle {
     fn visit_mut_expr(&mut self, expr: &mut Expr<T>) {
-        let list = match expr {
-            Expr::Any(Any(any)) => any,
-            Expr::All(All(all)) => all,
-            _ => return,
+        match expr {
+            Expr::Any(Any(any)) => {
+                if any.is_empty() {
+                    *expr = Expr::Const(false);
+                } else if any.len() == 1 {
+                    *expr = any.pop().unwrap();
+                }
+            }
+            Expr::All(All(all)) => {
+                if all.is_empty() {
+                    *expr = Expr::Const(true);
+                } else if all.len() == 1 {
+                    *expr = all.pop().unwrap();
+                }
+            }
+            _ => {}
         };
-        if list.len() == 1 {
-            *expr = list.pop().unwrap();
-        }
     }
 }
 
