@@ -8,9 +8,9 @@ doc:
 
 sync-version:
     cargo set-version   -p codegen-writer   0.1.3-dev
-    cargo set-version   -p bool-logic       0.1.3-dev
-    cargo set-version   -p codegen-cfg      0.1.3-dev
-    cargo set-version   -p codegen-libc     0.1.3-dev
+    cargo set-version   -p bool-logic       0.1.3
+    cargo set-version   -p codegen-cfg      0.1.3
+    cargo set-version   -p codegen-libc     0.1.3
 
 publish:
     cargo publish       -p codegen-writer   
