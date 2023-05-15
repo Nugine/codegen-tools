@@ -13,7 +13,8 @@ use anyhow::Result;
 use camino::{Utf8Path, Utf8PathBuf};
 use log::error;
 use regex::Regex;
-use rust_utils::{default, map_collect_vec};
+use rust_utils::default::default;
+use rust_utils::iter::map_collect_vec;
 use serde::{Deserialize, Serialize};
 use walkdir::WalkDir;
 

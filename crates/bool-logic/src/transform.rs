@@ -4,7 +4,7 @@ use crate::visit_mut::VisitMut;
 use std::mem;
 use std::ops::Not as _;
 
-use rust_utils::default;
+use rust_utils::default::default;
 
 pub struct FlattenSingle;
 

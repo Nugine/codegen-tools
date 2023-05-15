@@ -3,8 +3,8 @@ use codegen_cfg::ast::*;
 use std::collections::HashMap;
 
 use once_cell::sync::Lazy;
-use rust_utils::default_with;
-use rust_utils::map_collect_vec;
+use rust_utils::default::default_with;
+use rust_utils::iter::map_collect_vec;
 
 pub static PROMOTE_MODS: &[&str] = &[
     "align",          // rustc >= 1.25
