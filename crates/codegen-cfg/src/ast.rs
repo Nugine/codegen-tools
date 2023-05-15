@@ -24,38 +24,9 @@ pub fn not(x: impl Into<Not<Pred>>) -> Not<Pred> {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-#[non_exhaustive]
-pub enum Pred {
-    TargetFamily(String),
-    TargetVendor(String),
-    TargetArch(String),
-    TargetOs(String),
-    TargetEnv(String),
-    TargetPointerWidth(String),
-}
-
-pub fn target_family(s: impl Into<String>) -> Pred {
-    Pred::TargetFamily(s.into())
-}
-
-pub fn target_vendor(s: impl Into<String>) -> Pred {
-    Pred::TargetVendor(s.into())
-}
-
-pub fn target_arch(s: impl Into<String>) -> Pred {
-    Pred::TargetArch(s.into())
-}
-
-pub fn target_os(s: impl Into<String>) -> Pred {
-    Pred::TargetOs(s.into())
-}
-
-pub fn target_env(s: impl Into<String>) -> Pred {
-    Pred::TargetEnv(s.into())
-}
-
-pub fn target_pointer_width(s: impl Into<String>) -> Pred {
-    Pred::TargetPointerWidth(s.into())
+pub struct Pred {
+    pub key: String,
+    pub value: Option<String>,
 }
 
 impl From<Pred> for Expr {
@@ -64,24 +35,52 @@ impl From<Pred> for Expr {
     }
 }
 
-impl fmt::Display for Pred {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Pred::TargetFamily(s) => match s.as_str() {
-                "unix" | "windows" | "wasm" => write!(f, "{}", s),
-                _ => fmt_kv(f, "target_family", s),
-            },
-            Pred::TargetVendor(s) => fmt_kv(f, "target_vendor", s),
-            Pred::TargetArch(s) => fmt_kv(f, "target_arch", s),
-            Pred::TargetOs(s) => fmt_kv(f, "target_os", s),
-            Pred::TargetEnv(s) => fmt_kv(f, "target_env", s),
-            Pred::TargetPointerWidth(s) => fmt_kv(f, "target_pointer_width", s),
-        }
+pub fn flag(s: impl Into<String>) -> Pred {
+    Pred {
+        key: s.into(),
+        value: None,
     }
 }
 
-fn fmt_kv(f: &mut fmt::Formatter<'_>, key: &str, value: &str) -> fmt::Result {
-    write!(f, "{key} = {value:?}")
+pub fn key_value(s: impl Into<String>, v: impl Into<String>) -> Pred {
+    Pred {
+        key: s.into(),
+        value: Some(v.into()),
+    }
+}
+
+pub fn target_family(s: impl Into<String>) -> Pred {
+    key_value("target_family", s)
+}
+
+pub fn target_vendor(s: impl Into<String>) -> Pred {
+    key_value("target_vendor", s)
+}
+
+pub fn target_arch(s: impl Into<String>) -> Pred {
+    key_value("target_arch", s)
+}
+
+pub fn target_os(s: impl Into<String>) -> Pred {
+    key_value("target_os", s)
+}
+
+pub fn target_env(s: impl Into<String>) -> Pred {
+    key_value("target_env", s)
+}
+
+pub fn target_pointer_width(s: impl Into<String>) -> Pred {
+    key_value("target_pointer_width", s)
+}
+
+impl fmt::Display for Pred {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let key = self.key.as_str();
+        match &self.value {
+            Some(value) => write!(f, "{key} = {value:?}"),
+            None => write!(f, "{key}"),
+        }
+    }
 }
 
 #[cfg(test)]
@@ -92,7 +91,7 @@ mod tests {
     fn cfg_string() {
         {
             let cfg = expr(target_family("unix"));
-            let expected = "unix";
+            let expected = r#"target_family = "unix""#;
             assert_eq!(cfg.to_string(), expected);
         }
         {

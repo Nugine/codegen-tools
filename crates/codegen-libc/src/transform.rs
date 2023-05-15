@@ -20,7 +20,7 @@ pub fn simplified_expr(x: impl Into<Expr>) -> Expr {
     }
 
     visit_mut_preorder(&mut x, &mut SortByPriority);
-    visit_mut_preorder(&mut x, &mut SortTargetOs);
+    visit_mut_preorder(&mut x, &mut SortByValue);
 
     x
 }
@@ -39,13 +39,13 @@ impl VisitMut<Pred> for SortByPriority {
             Expr::Not(_) => 101,
             Expr::Any(_) => 102,
             Expr::All(_) => 103,
-            Expr::Var(Var(pred)) => match pred {
-                Pred::TargetFamily(_) => 1,
-                Pred::TargetArch(_) => 2,
-                Pred::TargetVendor(_) => 3,
-                Pred::TargetOs(_) => 4,
-                Pred::TargetEnv(_) => 5,
-                Pred::TargetPointerWidth(_) => 6,
+            Expr::Var(Var(pred)) => match pred.key.as_str() {
+                "target_family" => 1,
+                "target_arch" => 2,
+                "target_vendor" => 3,
+                "target_os" => 4,
+                "target_env" => 5,
+                "target_pointer_width" => 6,
                 _ => unimplemented!(),
             },
             Expr::Const(_) => panic!(),
@@ -53,9 +53,9 @@ impl VisitMut<Pred> for SortByPriority {
     }
 }
 
-struct SortTargetOs;
+struct SortByValue;
 
-impl VisitMut<Pred> for SortTargetOs {
+impl VisitMut<Pred> for SortByValue {
     fn visit_mut_expr(&mut self, expr: &mut Expr) {
         let list = match expr {
             Expr::Any(Any(any)) => any,
@@ -64,8 +64,14 @@ impl VisitMut<Pred> for SortTargetOs {
         };
 
         list.sort_by(|lhs, rhs| {
-            let Expr::Var(Var(Pred::TargetOs(lhs))) = lhs else { return Equal };
-            let Expr::Var(Var(Pred::TargetOs(rhs))) = rhs else { return Equal };
+            let Expr::Var(Var(lhs)) = lhs else { return Equal };
+            let Expr::Var(Var(rhs)) = rhs else { return Equal };
+            if lhs.key != rhs.key {
+                return Equal;
+            }
+
+            let Some(lhs) = lhs.value.as_deref() else { return Equal };
+            let Some(rhs) = rhs.value.as_deref() else { return Equal };
             lhs.cmp(rhs)
         })
     }
