@@ -106,22 +106,22 @@ impl<T> From<T> for Var<T> {
 }
 
 macro_rules! impl_from_tuple {
-    ($ty:ident, ($tt:tt,)) => {
-        impl_from_tuple!(@expand $ty, ($tt,));
+    ($ty:ident, ()) => {
+        impl_from_tuple!(@expand $ty, ());
     };
-    ($ty:ident, ($x:tt, $($xs:tt,)+)) => {
-        impl_from_tuple!($ty, ($($xs,)+));
-        impl_from_tuple!(@expand $ty, ($x, $($xs,)+));
+    ($ty:ident, ($x:tt, $($xs:tt,)*)) => {
+        impl_from_tuple!($ty, ($($xs,)*));
+        impl_from_tuple!(@expand $ty, ($x, $($xs,)*));
     };
-    (@expand $ty:ident, ($($tt:tt,)+)) => {
+    (@expand $ty:ident, ($($tt:tt,)*)) => {
         #[doc(hidden)] // too ugly
         #[allow(non_camel_case_types)]
-        impl<T, $($tt),+> From<($($tt,)+)>  for $ty<T>
+        impl<T, $($tt),*> From<($($tt,)*)>  for $ty<T>
         where
-            $($tt: Into<Expr<T>>,)+
+            $($tt: Into<Expr<T>>,)*
         {
-            fn from(($($tt,)+): ($($tt,)+)) -> Self {
-                Self::from(vec![$(Into::into($tt)),+])
+            fn from(($($tt,)*): ($($tt,)*)) -> Self {
+                Self::from(vec![$(Into::into($tt)),*])
             }
         }
     };
