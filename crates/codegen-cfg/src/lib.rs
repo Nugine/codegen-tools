@@ -1,3 +1,5 @@
+pub use bool_logic;
+
 pub mod ast;
 
-pub use bool_logic;
+pub mod parsing;
