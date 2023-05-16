@@ -1,26 +1,49 @@
-use std::cmp::Ordering::*;
-
 use codegen_cfg::ast::{Expr, Pred, Var};
 use codegen_cfg::bool_logic::transform::*;
 use codegen_cfg::bool_logic::visit_mut::*;
 
+use std::cmp::Ordering::*;
+
+use log::debug;
+
 pub fn simplified_expr(x: impl Into<Expr>) -> Expr {
     let mut x = x.into();
 
-    for _ in 0..2 {
+    debug!("input: {x}");
+
+    for _ in 0..3 {
+        debug!("before FlattenSingle: {x}");
         FlattenSingle.visit_mut_expr(&mut x);
+
+        debug!("before FlattenNestedList: {x}");
         FlattenNestedList.visit_mut_expr(&mut x);
+
+        debug!("before FlattenByDeMorgan: {x}");
+        FlattenByDeMorgan.visit_mut_expr(&mut x);
+
+        debug!("before FlattenByDistributive: {x}");
         DedupList.visit_mut_expr(&mut x);
 
-        SimplifyNestedList.visit_mut_expr(&mut x);
-        SimplifyAllNotAny.visit_mut_expr(&mut x);
-        SimplifyAllOfAny.visit_mut_expr(&mut x);
+        debug!("before EvalConst: {x}");
+        EvalConst.visit_mut_expr(&mut x);
 
+        debug!("before SimplifyNestedList: {x}");
+        SimplifyNestedList.visit_mut_expr(&mut x);
+
+        debug!("before SimplifyAllNotAny: {x}");
+        SimplifyAllNotAny.visit_mut_expr(&mut x);
+
+        debug!("before EvalConst: {x}");
         EvalConst.visit_mut_expr(&mut x);
     }
 
+    debug!("before SortByPriority: {x}");
     SortByPriority.visit_mut_expr(&mut x);
+
+    debug!("before SortByValue: {x}");
     SortByValue.visit_mut_expr(&mut x);
+
+    debug!("output: {x}");
 
     x
 }

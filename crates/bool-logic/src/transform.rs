@@ -261,53 +261,6 @@ where
     }
 }
 
-/// Simplify `all(any(...), any(...), any(...))`
-pub struct SimplifyAllOfAny;
-
-impl SimplifyAllOfAny {
-    fn intersect<T: Eq>(lhs: &mut Vec<Expr<T>>, rhs: &mut Vec<Expr<T>>, ans: &mut Vec<Expr<T>>) {
-        ans.clear();
-        for x in lhs.drain(..) {
-            if rhs.contains(&x) {
-                ans.push(x);
-            }
-        }
-        rhs.clear();
-    }
-
-    fn simplify<T: Eq>(expr: &mut Expr<T>) {
-        let Expr::All(All(all)) = expr else {return};
-
-        let is_all_of_any = all.iter().all(|expr| matches!(expr, Expr::Any(_)));
-        if is_all_of_any.not() {
-            return;
-        }
-
-        let [first,  others @ ..] = all.as_mut_slice() else { return };
-        let Expr::Any(Any(first)) = first else { panic!() };
-
-        let mut buf: Vec<Expr<T>> = default();
-
-        for x in others {
-            let Expr::Any(Any(any)) = x else { panic!() };
-            Self::intersect(first, any, &mut buf);
-            mem::swap(first, &mut buf);
-        }
-
-        *expr = Expr::Any(Any(mem::take(first)));
-    }
-}
-
-impl<T> VisitMut<T> for SimplifyAllOfAny
-where
-    T: Eq,
-{
-    fn visit_mut_expr(&mut self, expr: &mut Expr<T>) {
-        Self::simplify(expr);
-        walk_mut_expr(self, expr);
-    }
-}
-
 pub struct FlattenByDeMorgan;
 
 impl<T> VisitMut<T> for FlattenByDeMorgan {

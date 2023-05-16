@@ -22,4 +22,7 @@ codegen-libc *ARGS:
     #!/bin/bash -e
     cd {{ justfile_directory() }}
     ./scripts/download-libc.sh
-    cargo run -p codegen-libc --features binary --release -- --libc temp/libc {{ ARGS }} | rustfmt
+    export RUST_LOG=debug
+    export RUST_BACKTRACE=full
+    cargo run -p codegen-libc --features binary \
+        -- --libc temp/libc {{ ARGS }} | rustfmt
