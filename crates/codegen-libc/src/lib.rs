@@ -1,4 +1,5 @@
 mod rules;
+pub mod syn;
 mod transform;
 
 pub use self::transform::simplified_expr;
