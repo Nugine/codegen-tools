@@ -1,8 +1,8 @@
-use codegen_cfg::ast::{flag, Expr, Pred, Var};
+use codegen_cfg::ast::{flag, Expr, Not, Pred, Var};
 use codegen_cfg::bool_logic::transform::*;
 use codegen_cfg::bool_logic::visit_mut::*;
 
-use std::cmp::Ordering::*;
+use std::cmp::Ordering::{self, *};
 
 use log::debug;
 
@@ -88,20 +88,34 @@ impl VisitMut<Pred> for SortByPriority {
 
 struct SortByValue;
 
+impl SortByValue {
+    fn cmp_var(lhs: &Expr, rhs: &Expr) -> Ordering {
+        let Expr::Var(Var(lhs)) = lhs else { return Equal };
+        let Expr::Var(Var(rhs)) = rhs else { return Equal };
+
+        let ok = Ord::cmp(lhs.key.as_str(), rhs.key.as_str());
+
+        match (lhs.value.as_deref(), rhs.value.as_deref()) {
+            (None, None) => ok,
+            (Some(lv), Some(rv)) => ok.then_with(|| Ord::cmp(lv, rv)),
+            (None, Some(_)) => Less,
+            (Some(_), None) => Greater,
+        }
+    }
+
+    fn cmp_not(lhs: &Expr, rhs: &Expr) -> Ordering {
+        let Expr::Not(Not(lhs)) = lhs else { return Equal };
+        let Expr::Not(Not(rhs)) = rhs else { return Equal };
+
+        Self::cmp_var(lhs, rhs)
+    }
+}
+
 impl VisitMut<Pred> for SortByValue {
     fn visit_mut_expr(&mut self, expr: &mut Expr) {
         if let Some(list) = expr.as_mut_expr_list() {
-            list.sort_by(|lhs, rhs| {
-                let Expr::Var(Var(lhs)) = lhs else { return Equal };
-                let Expr::Var(Var(rhs)) = rhs else { return Equal };
-                if lhs.key != rhs.key {
-                    return Equal;
-                }
-
-                let Some(lhs) = lhs.value.as_deref() else { return Equal };
-                let Some(rhs) = rhs.value.as_deref() else { return Equal };
-                lhs.cmp(rhs)
-            });
+            list.sort_by(Self::cmp_var);
+            list.sort_by(Self::cmp_not);
         }
 
         walk_mut_expr(self, expr);
