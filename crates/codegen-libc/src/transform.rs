@@ -1,4 +1,4 @@
-use codegen_cfg::ast::{Expr, Pred, Var};
+use codegen_cfg::ast::{flag, Expr, Pred, Var};
 use codegen_cfg::bool_logic::transform::*;
 use codegen_cfg::bool_logic::visit_mut::*;
 
@@ -11,36 +11,38 @@ pub fn simplified_expr(x: impl Into<Expr>) -> Expr {
 
     debug!("input: {x}");
 
+    UnifyTargetFamily.visit_mut_expr(&mut x);
+
     for _ in 0..3 {
-        debug!("before FlattenSingle: {x}");
+        // debug!("before FlattenSingle: {x}");
         FlattenSingle.visit_mut_expr(&mut x);
 
-        debug!("before FlattenNestedList: {x}");
+        // debug!("before FlattenNestedList: {x}");
         FlattenNestedList.visit_mut_expr(&mut x);
 
-        debug!("before FlattenByDeMorgan: {x}");
+        // debug!("before FlattenByDeMorgan: {x}");
         FlattenByDeMorgan.visit_mut_expr(&mut x);
 
-        debug!("before FlattenByDistributive: {x}");
+        // debug!("before FlattenByDistributive: {x}");
         DedupList.visit_mut_expr(&mut x);
 
-        debug!("before EvalConst: {x}");
+        // debug!("before EvalConst: {x}");
         EvalConst.visit_mut_expr(&mut x);
 
-        debug!("before SimplifyNestedList: {x}");
+        // debug!("before SimplifyNestedList: {x}");
         SimplifyNestedList.visit_mut_expr(&mut x);
 
-        debug!("before SimplifyAllNotAny: {x}");
+        // debug!("before SimplifyAllNotAny: {x}");
         SimplifyAllNotAny.visit_mut_expr(&mut x);
 
-        debug!("before EvalConst: {x}");
+        // debug!("before EvalConst: {x}");
         EvalConst.visit_mut_expr(&mut x);
     }
 
-    debug!("before SortByPriority: {x}");
+    // debug!("before SortByPriority: {x}");
     SortByPriority.visit_mut_expr(&mut x);
 
-    debug!("before SortByValue: {x}");
+    // debug!("before SortByValue: {x}");
     SortByValue.visit_mut_expr(&mut x);
 
     debug!("output: {x}");
@@ -103,5 +105,20 @@ impl VisitMut<Pred> for SortByValue {
         }
 
         walk_mut_expr(self, expr);
+    }
+}
+
+struct UnifyTargetFamily;
+
+impl VisitMut<Pred> for UnifyTargetFamily {
+    fn visit_mut_var(&mut self, Var(pred): &mut Var<Pred>) {
+        if pred.key == "target_famiy" {
+            if let Some(value) = pred.value.as_deref() {
+                match value {
+                    "unix" | "windows" | "wasm" => *pred = flag(value),
+                    _ => {}
+                }
+            }
+        }
     }
 }
