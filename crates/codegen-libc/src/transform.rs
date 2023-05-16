@@ -20,9 +20,6 @@ pub fn simplified_expr(x: impl Into<Expr>) -> Expr {
         // debug!("before FlattenNestedList: {x}");
         FlattenNestedList.visit_mut_expr(&mut x);
 
-        // debug!("before FlattenByDeMorgan: {x}");
-        FlattenByDeMorgan.visit_mut_expr(&mut x);
-
         // debug!("before FlattenByDistributive: {x}");
         DedupList.visit_mut_expr(&mut x);
 
