@@ -1,10 +1,9 @@
-use codegen_libc::generate_item_cfg;
-use codegen_libc::generate_item_list;
-
 use anyhow::Result;
 use camino::Utf8PathBuf;
 use clap::Parser;
 use regex::RegexSet;
+use std::io::Write as _;
+use std::ops::Not;
 
 #[derive(clap::Parser)]
 struct Opt {
@@ -18,18 +17,14 @@ fn main() -> Result<()> {
     env_logger::init();
     let opt = Opt::parse();
 
-    let libc_repo_path = &opt.libc;
+    anyhow::ensure!(opt.filters.is_empty().not(), "no filters specified");
 
     let re = RegexSet::new(&opt.filters)?;
+    let ans = codegen_libc::search::search_items(&opt.libc, &re)?;
 
-    let item_list = generate_item_list(libc_repo_path)?;
-
-    for item in &item_list {
-        let name = item.name.as_str();
-        if re.is_match(name) {
-            let cfg = generate_item_cfg(item);
-            println!("#[{cfg}]\npub use libc::{name};\n");
-        }
+    let mut stdout = std::io::stdout().lock();
+    for (cfg, name) in ans {
+        writeln!(stdout, "#[cfg({cfg})]\npub use libc::{name};\n")?;
     }
 
     Ok(())
