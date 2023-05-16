@@ -1,5 +1,5 @@
 use crate::ast::{All, Any, Expr, Not};
-use crate::visit_mut::VisitMut;
+use crate::visit_mut::*;
 
 use std::mem;
 use std::ops::Not as _;
@@ -27,13 +27,15 @@ impl<T> VisitMut<T> for FlattenSingle {
             }
             _ => {}
         };
+
+        walk_expr(self, expr)
     }
 }
 
 pub struct FlattenNestedList;
 
-impl<T> VisitMut<T> for FlattenNestedList {
-    fn visit_mut_any(&mut self, Any(list): &mut Any<T>) {
+impl FlattenNestedList {
+    fn flatten_any<T>(list: &mut Vec<Expr<T>>) {
         let has_any = list.iter().any(|expr| matches!(expr, Expr::Any(_)));
         if has_any.not() {
             return;
@@ -49,7 +51,7 @@ impl<T> VisitMut<T> for FlattenNestedList {
         *list = ans;
     }
 
-    fn visit_mut_all(&mut self, All(list): &mut All<T>) {
+    fn flatten_all<T>(list: &mut Vec<Expr<T>>) {
         let has_all = list.iter().any(|expr| matches!(expr, Expr::All(_)));
         if has_all.not() {
             return;
@@ -66,6 +68,18 @@ impl<T> VisitMut<T> for FlattenNestedList {
     }
 }
 
+impl<T> VisitMut<T> for FlattenNestedList {
+    fn visit_mut_any(&mut self, Any(list): &mut Any<T>) {
+        Self::flatten_any(list);
+        walk_expr_list(self, list);
+    }
+
+    fn visit_mut_all(&mut self, All(list): &mut All<T>) {
+        Self::flatten_all(list);
+        walk_expr_list(self, list);
+    }
+}
+
 pub struct DedupList;
 
 impl<T> VisitMut<T> for DedupList
@@ -73,24 +87,21 @@ where
     T: Eq,
 {
     fn visit_mut_expr(&mut self, expr: &mut Expr<T>) {
-        let list = match expr {
-            Expr::Any(Any(any)) => any,
-            Expr::All(All(all)) => all,
-            _ => return,
-        };
-
-        let mut i = 0;
-        while i < list.len() {
-            let mut j = i + 1;
-            while j < list.len() {
-                if list[i] == list[j] {
-                    list.remove(j);
-                } else {
-                    j += 1;
+        if let Some(list) = expr.as_expr_list_mut() {
+            let mut i = 0;
+            while i < list.len() {
+                let mut j = i + 1;
+                while j < list.len() {
+                    if list[i] == list[j] {
+                        list.remove(j);
+                    } else {
+                        j += 1;
+                    }
                 }
+                i += 1;
             }
-            i += 1;
         }
+        walk_expr(self, expr);
     }
 }
 
@@ -127,6 +138,8 @@ impl EvalConst {
 
 impl<T> VisitMut<T> for EvalConst {
     fn visit_mut_expr(&mut self, expr: &mut Expr<T>) {
+        walk_expr(self, expr);
+
         match expr {
             Expr::Any(Any(any)) => {
                 if let Some(val) = Self::eval_any(any) {
@@ -173,6 +186,8 @@ where
 
             i += 1;
         }
+
+        walk_expr_list(self, any);
     }
 
     /// `all(x0, any(x0, x1), x2) => all(x0, x2)`
@@ -188,6 +203,8 @@ where
 
             i += 1;
         }
+
+        walk_expr_list(self, all);
     }
 }
 
@@ -225,6 +242,8 @@ where
                 Self::counteract(neg, pos);
             }
         }
+
+        walk_expr_list(self, all);
     }
 }
 
@@ -232,10 +251,7 @@ where
 pub struct SimplifyAllOfAny;
 
 impl SimplifyAllOfAny {
-    fn intersect<T>(lhs: &mut Vec<Expr<T>>, rhs: &mut Vec<Expr<T>>, ans: &mut Vec<Expr<T>>)
-    where
-        T: Eq,
-    {
+    fn intersect<T: Eq>(lhs: &mut Vec<Expr<T>>, rhs: &mut Vec<Expr<T>>, ans: &mut Vec<Expr<T>>) {
         ans.clear();
         for x in lhs.drain(..) {
             if rhs.contains(&x) {
@@ -244,13 +260,8 @@ impl SimplifyAllOfAny {
         }
         rhs.clear();
     }
-}
 
-impl<T> VisitMut<T> for SimplifyAllOfAny
-where
-    T: Eq,
-{
-    fn visit_mut_expr(&mut self, expr: &mut Expr<T>) {
+    fn simplify<T: Eq>(expr: &mut Expr<T>) {
         let Expr::All(All(all)) = expr else {return};
 
         let is_all_of_any = all.iter().all(|expr| matches!(expr, Expr::Any(_)));
@@ -270,5 +281,15 @@ where
         }
 
         *expr = Expr::Any(Any(mem::take(first)));
+    }
+}
+
+impl<T> VisitMut<T> for SimplifyAllOfAny
+where
+    T: Eq,
+{
+    fn visit_mut_expr(&mut self, expr: &mut Expr<T>) {
+        Self::simplify(expr);
+        walk_expr(self, expr);
     }
 }

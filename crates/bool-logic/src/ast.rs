@@ -197,3 +197,12 @@ where
     }
     write!(f, ")")
 }
+
+impl<T> Expr<T> {
+    pub fn as_expr_list_mut(&mut self) -> Option<&mut Vec<Expr<T>>> {
+        match self {
+            Expr::Any(Any(list)) | Expr::All(All(list)) => Some(list),
+            _ => None,
+        }
+    }
+}
