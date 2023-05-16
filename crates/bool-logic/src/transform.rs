@@ -1,8 +1,8 @@
 use crate::ast::{self, All, Any, Expr, Not};
 use crate::visit_mut::*;
 
-use std::mem;
 use std::ops::Not as _;
+use std::{mem, slice};
 
 use rust_utils::iter::map_collect_vec;
 
@@ -108,7 +108,7 @@ where
     T: Eq,
 {
     fn visit_mut_expr(&mut self, expr: &mut Expr<T>) {
-        if let Some(list) = expr.as_expr_list_mut() {
+        if let Some(list) = expr.as_mut_expr_list() {
             let mut i = 0;
             while i < list.len() {
                 let mut j = i + 1;
@@ -242,14 +242,11 @@ where
     }
 }
 
-/// Simplify `all(not(any(...)), any(...))`
 pub struct SimplifyAllNotAny;
 
 impl SimplifyAllNotAny {
-    fn counteract<T>(neg: &[Expr<T>], pos: &mut Vec<Expr<T>>)
-    where
-        T: Eq,
-    {
+    /// Simplify `all(not(any(...)), any(...))`
+    fn counteract<T: Eq>(neg: &[Expr<T>], pos: &mut Vec<Expr<T>>) {
         let mut i = 0;
         while i < pos.len() {
             if neg.contains(&pos[i]) {
@@ -267,14 +264,17 @@ where
 {
     fn visit_mut_all(&mut self, All(all): &mut All<T>) {
         if let [Expr::Not(Not(not)), Expr::Any(Any(pos))] = all.as_mut_slice() {
-            if let Expr::Any(Any(neg)) = &mut **not {
-                Self::counteract(neg, pos);
-            }
-        }
-        if let [Expr::Any(Any(pos)), Expr::Not(Not(not))] = all.as_mut_slice() {
-            if let Expr::Any(Any(neg)) = &mut **not {
-                Self::counteract(neg, pos);
-            }
+            let neg = match not.as_mut_any() {
+                Some(Any(neg)) => neg,
+                None => slice::from_mut(&mut **not),
+            };
+            Self::counteract(neg, pos);
+        } else if let [Expr::Any(Any(pos)), Expr::Not(Not(not))] = all.as_mut_slice() {
+            let neg = match not.as_mut_any() {
+                Some(Any(neg)) => neg,
+                None => slice::from_mut(&mut **not),
+            };
+            Self::counteract(neg, pos);
         }
 
         walk_mut_expr_list(self, all);

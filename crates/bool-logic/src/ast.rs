@@ -199,7 +199,7 @@ where
 }
 
 impl<T> Expr<T> {
-    pub fn as_expr_list_mut(&mut self) -> Option<&mut Vec<Expr<T>>> {
+    pub fn as_mut_expr_list(&mut self) -> Option<&mut Vec<Expr<T>>> {
         match self {
             Expr::Any(Any(list)) | Expr::All(All(list)) => Some(list),
             _ => None,
@@ -232,5 +232,19 @@ impl<T> Expr<T> {
 
     pub fn is_const_false(&self) -> bool {
         matches!(self, Self::Const(false))
+    }
+
+    pub fn as_mut_any(&mut self) -> Option<&mut Any<T>> {
+        match self {
+            Expr::Any(any) => Some(any),
+            _ => None,
+        }
+    }
+
+    pub fn as_mut_all(&mut self) -> Option<&mut All<T>> {
+        match self {
+            Expr::All(all) => Some(all),
+            _ => None,
+        }
     }
 }

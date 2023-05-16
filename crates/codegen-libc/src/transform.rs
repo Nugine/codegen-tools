@@ -72,7 +72,7 @@ impl SortByPriority {
 
 impl VisitMut<Pred> for SortByPriority {
     fn visit_mut_expr(&mut self, expr: &mut Expr) {
-        if let Some(list) = expr.as_expr_list_mut() {
+        if let Some(list) = expr.as_mut_expr_list() {
             list.sort_by(|lhs, rhs| {
                 let Some(lhs) = Self::get_priority(lhs) else {return Equal};
                 let Some(rhs) = Self::get_priority(rhs) else {return Equal};
@@ -88,7 +88,7 @@ struct SortByValue;
 
 impl VisitMut<Pred> for SortByValue {
     fn visit_mut_expr(&mut self, expr: &mut Expr) {
-        if let Some(list) = expr.as_expr_list_mut() {
+        if let Some(list) = expr.as_mut_expr_list() {
             list.sort_by(|lhs, rhs| {
                 let Expr::Var(Var(lhs)) = lhs else { return Equal };
                 let Expr::Var(Var(rhs)) = rhs else { return Equal };
