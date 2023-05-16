@@ -57,7 +57,7 @@ impl VisitMut<Pred> for SortByPriority {
             })
         }
 
-        walk_expr(self, expr);
+        walk_mut_expr(self, expr);
     }
 }
 
@@ -79,6 +79,6 @@ impl VisitMut<Pred> for SortByValue {
             });
         }
 
-        walk_expr(self, expr);
+        walk_mut_expr(self, expr);
     }
 }

@@ -33,8 +33,8 @@ pub fn all<T>(x: impl Into<All<T>>) -> All<T> {
     x.into()
 }
 
-pub fn not<T>(x: impl Into<Not<T>>) -> Not<T> {
-    x.into()
+pub fn not<T>(x: impl Into<Expr<T>>) -> Not<T> {
+    x.into().into()
 }
 
 pub fn var<T>(x: impl Into<Var<T>>) -> Var<T> {

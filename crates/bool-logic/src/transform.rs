@@ -29,7 +29,7 @@ impl<T> VisitMut<T> for FlattenSingle {
             _ => {}
         };
 
-        walk_expr(self, expr)
+        walk_mut_expr(self, expr)
     }
 }
 
@@ -72,12 +72,12 @@ impl FlattenNestedList {
 impl<T> VisitMut<T> for FlattenNestedList {
     fn visit_mut_any(&mut self, Any(list): &mut Any<T>) {
         Self::flatten_any(list);
-        walk_expr_list(self, list);
+        walk_mut_expr_list(self, list);
     }
 
     fn visit_mut_all(&mut self, All(list): &mut All<T>) {
         Self::flatten_all(list);
-        walk_expr_list(self, list);
+        walk_mut_expr_list(self, list);
     }
 }
 
@@ -102,7 +102,7 @@ where
                 i += 1;
             }
         }
-        walk_expr(self, expr);
+        walk_mut_expr(self, expr);
     }
 }
 
@@ -152,7 +152,7 @@ impl EvalConst {
 
 impl<T> VisitMut<T> for EvalConst {
     fn visit_mut_expr(&mut self, expr: &mut Expr<T>) {
-        walk_expr(self, expr);
+        walk_mut_expr(self, expr);
 
         match expr {
             Expr::Any(Any(any)) => {
@@ -201,7 +201,7 @@ where
             i += 1;
         }
 
-        walk_expr_list(self, any);
+        walk_mut_expr_list(self, any);
     }
 
     /// `all(x0, any(x0, x1), x2) => all(x0, x2)`
@@ -218,7 +218,7 @@ where
             i += 1;
         }
 
-        walk_expr_list(self, all);
+        walk_mut_expr_list(self, all);
     }
 }
 
@@ -257,11 +257,11 @@ where
             }
         }
 
-        walk_expr_list(self, all);
+        walk_mut_expr_list(self, all);
     }
 }
 
-/// Simplify `all(any(...), any(...))`
+/// Simplify `all(any(...), any(...), any(...))`
 pub struct SimplifyAllOfAny;
 
 impl SimplifyAllOfAny {
@@ -304,7 +304,7 @@ where
 {
     fn visit_mut_expr(&mut self, expr: &mut Expr<T>) {
         Self::simplify(expr);
-        walk_expr(self, expr);
+        walk_mut_expr(self, expr);
     }
 }
 
@@ -326,6 +326,20 @@ impl<T> VisitMut<T> for FlattenByDeMorgan {
             }
         }
 
-        walk_expr(self, expr)
+        walk_mut_expr(self, expr)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use crate::ast::*;
+
+    #[test]
+    fn eval_const() {
+        let mut cfg: Expr<u32> = expr(not(not(any(()))));
+        EvalConst.visit_mut_expr(&mut cfg);
+        assert_eq!(cfg.to_string(), "false");
     }
 }
