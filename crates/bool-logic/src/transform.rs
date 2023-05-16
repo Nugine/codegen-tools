@@ -1,10 +1,11 @@
-use crate::ast::{All, Any, Expr, Not};
+use crate::ast::{self, All, Any, Expr, Not};
 use crate::visit_mut::*;
 
 use std::mem;
 use std::ops::Not as _;
 
 use rust_utils::default::default;
+use rust_utils::iter::map_collect_vec;
 
 pub struct FlattenSingle;
 
@@ -304,5 +305,27 @@ where
     fn visit_mut_expr(&mut self, expr: &mut Expr<T>) {
         Self::simplify(expr);
         walk_expr(self, expr);
+    }
+}
+
+pub struct FlattenByDeMorgan;
+
+impl<T> VisitMut<T> for FlattenByDeMorgan {
+    fn visit_mut_expr(&mut self, expr: &mut Expr<T>) {
+        if let Expr::Not(Not(not)) = expr {
+            match &mut **not {
+                Expr::Any(Any(any)) => {
+                    let list = map_collect_vec(any.drain(..), |expr| ast::expr(ast::not(expr)));
+                    *expr = ast::expr(ast::all(list));
+                }
+                Expr::All(All(all)) => {
+                    let list = map_collect_vec(all.drain(..), |expr| ast::expr(ast::not(expr)));
+                    *expr = ast::expr(ast::any(list));
+                }
+                _ => {}
+            }
+        }
+
+        walk_expr(self, expr)
     }
 }
