@@ -1,14 +1,31 @@
 use crate::ast::{self, All, Any, Expr, Not};
 use crate::visit_mut::*;
 
+use std::mem;
 use std::ops::Not as _;
 
 use rust_utils::iter::map_collect_vec;
+
+fn replace_with<T>(place: &mut T, dummy: T, f: impl FnOnce(T) -> T) {
+    let dummy = mem::replace(place, dummy);
+    let ans = f(dummy);
+    *place = ans;
+}
+
+fn unwrap_not<T>(expr: Expr<T>) -> Expr<T> {
+    if let Expr::Not(Not(not)) = expr {
+        *not
+    } else {
+        panic!()
+    }
+}
 
 pub struct FlattenSingle;
 
 impl<T> VisitMut<T> for FlattenSingle {
     fn visit_mut_expr(&mut self, expr: &mut Expr<T>) {
+        walk_mut_expr(self, expr);
+
         match expr {
             Expr::Any(Any(any)) => {
                 if any.is_empty() {
@@ -22,6 +39,11 @@ impl<T> VisitMut<T> for FlattenSingle {
                     *expr = Expr::Const(true);
                 } else if all.len() == 1 {
                     *expr = all.pop().unwrap();
+                }
+            }
+            Expr::Not(Not(not_expr)) => {
+                if not_expr.is_not() {
+                    replace_with(expr, Expr::Const(false), |expr| unwrap_not(unwrap_not(expr)))
                 }
             }
             _ => {}
