@@ -99,6 +99,30 @@ impl<T> From<Expr<T>> for Not<T> {
     }
 }
 
+impl<T> From<Any<T>> for Not<T> {
+    fn from(any: Any<T>) -> Self {
+        Not(Box::new(any.into()))
+    }
+}
+
+impl<T> From<All<T>> for Not<T> {
+    fn from(all: All<T>) -> Self {
+        Not(Box::new(all.into()))
+    }
+}
+
+impl<T> From<Var<T>> for Not<T> {
+    fn from(var: Var<T>) -> Self {
+        Not(Box::new(var.into()))
+    }
+}
+
+impl<T> From<T> for Not<T> {
+    fn from(var: T) -> Self {
+        Self::from(Var(var))
+    }
+}
+
 impl<T> From<T> for Var<T> {
     fn from(var: T) -> Self {
         Var(var)
