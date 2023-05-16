@@ -206,6 +206,26 @@ impl<T> Expr<T> {
         }
     }
 
+    pub fn is_any(&self) -> bool {
+        matches!(self, Self::Any(_))
+    }
+
+    pub fn is_all(&self) -> bool {
+        matches!(self, Self::All(_))
+    }
+
+    pub fn is_not(&self) -> bool {
+        matches!(self, Self::Not(_))
+    }
+
+    pub fn is_var(&self) -> bool {
+        matches!(self, Self::Var(_))
+    }
+
+    pub fn is_const(&self) -> bool {
+        matches!(self, Self::Const(_))
+    }
+
     pub fn is_const_true(&self) -> bool {
         matches!(self, Self::Const(true))
     }

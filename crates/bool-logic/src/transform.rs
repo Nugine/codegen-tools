@@ -1,10 +1,8 @@
 use crate::ast::{self, All, Any, Expr, Not};
 use crate::visit_mut::*;
 
-use std::mem;
 use std::ops::Not as _;
 
-use rust_utils::default::default;
 use rust_utils::iter::map_collect_vec;
 
 pub struct FlattenSingle;
@@ -37,10 +35,10 @@ pub struct FlattenNestedList;
 
 impl FlattenNestedList {
     fn flatten_any<T>(list: &mut Vec<Expr<T>>) {
-        let has_any = list.iter().any(|expr| matches!(expr, Expr::Any(_)));
-        if has_any.not() {
+        if list.iter().all(|x| x.is_any().not()) {
             return;
         }
+
         let mut ans: Vec<Expr<T>> = Vec::with_capacity(list.len());
         for expr in list.drain(..) {
             if let Expr::Any(Any(any)) = expr {
@@ -53,10 +51,10 @@ impl FlattenNestedList {
     }
 
     fn flatten_all<T>(list: &mut Vec<Expr<T>>) {
-        let has_all = list.iter().any(|expr| matches!(expr, Expr::All(_)));
-        if has_all.not() {
+        if list.iter().all(|x| x.is_all().not()) {
             return;
         }
+
         let mut ans: Vec<Expr<T>> = Vec::with_capacity(list.len());
         for expr in list.drain(..) {
             if let Expr::All(All(all)) = expr {
