@@ -105,27 +105,40 @@ where
     }
 }
 
+/// TODO: rust_utils
+fn remove_if<T>(v: &mut Vec<T>, mut f: impl FnMut(&T) -> bool) {
+    v.retain(|x| !f(x))
+}
+
 pub struct EvalConst;
 
 impl EvalConst {
-    fn eval_any<T>(any: &[Expr<T>]) -> Option<bool> {
-        if any.iter().any(|expr| matches!(expr, Expr::Const(true))) {
-            return Some(true);
-        }
-        any.iter().try_fold(false, |acc, x| match x {
-            Expr::Const(val) => Some(acc | val),
-            _ => None,
-        })
-    }
+    fn eval_any<T>(any: &mut Vec<Expr<T>>) -> Option<bool> {
+        remove_if(any, |expr| expr.is_const_false());
 
-    fn eval_all<T>(all: &[Expr<T>]) -> Option<bool> {
-        if all.iter().any(|expr| matches!(expr, Expr::Const(false))) {
+        if any.is_empty() {
             return Some(false);
         }
-        all.iter().try_fold(true, |acc, x| match x {
-            Expr::Const(val) => Some(acc & val),
-            _ => None,
-        })
+
+        if any.iter().any(|expr| expr.is_const_true()) {
+            return Some(true);
+        }
+
+        None
+    }
+
+    fn eval_all<T>(all: &mut Vec<Expr<T>>) -> Option<bool> {
+        remove_if(all, |expr| expr.is_const_true());
+
+        if all.is_empty() {
+            return Some(true);
+        }
+
+        if all.iter().any(|expr| expr.is_const_false()) {
+            return Some(false);
+        }
+
+        None
     }
 
     fn eval_not<T>(not: &Expr<T>) -> Option<bool> {

@@ -205,4 +205,12 @@ impl<T> Expr<T> {
             _ => None,
         }
     }
+
+    pub fn is_const_true(&self) -> bool {
+        matches!(self, Self::Const(true))
+    }
+
+    pub fn is_const_false(&self) -> bool {
+        matches!(self, Self::Const(false))
+    }
 }
