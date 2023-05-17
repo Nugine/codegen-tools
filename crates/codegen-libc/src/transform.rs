@@ -1,9 +1,11 @@
 use codegen_cfg::ast::*;
 use codegen_cfg::bool_logic::transform::*;
 use codegen_cfg::bool_logic::visit_mut::*;
+use rust_utils::iter::filter_map_collect_vec;
 use rust_utils::vec::VecExt;
 
 use std::cmp::Ordering::{self, *};
+use std::mem;
 
 use log::debug;
 
@@ -44,6 +46,12 @@ pub fn simplified_expr(x: impl Into<Expr>) -> Expr {
 
         // debug!("before SuppressUnix: {x}");
         SuppressUnix.visit_mut_expr(&mut x);
+
+        // debug!("before EvalConst: {x}");
+        EvalConst.visit_mut_expr(&mut x);
+
+        // debug!("before MergePattern: {x}");
+        MergePattern.visit_mut_expr(&mut x);
 
         // debug!("before EvalConst: {x}");
         EvalConst.visit_mut_expr(&mut x);
@@ -270,6 +278,61 @@ impl VisitMut<Pred> for SuppressUnix {
         }
 
         walk_mut_expr_list(self, all)
+    }
+}
+
+struct MergePattern;
+
+impl MergePattern {
+    fn merge(any_list: &mut [Expr]) {
+        let mut pattern_list = filter_map_collect_vec(any_list, |x| {
+            if let Expr::All(All(all)) = x {
+                if let [first, second] = all.as_mut_slice() {
+                    if first.is_any() || first.is_var() {
+                        return Some((first, second));
+                    }
+                }
+            }
+            None
+        });
+
+        if let [head, rest @ ..] = pattern_list.as_mut_slice() {
+            let agg = match head.0 {
+                Expr::Any(Any(any)) => any,
+                Expr::Var(var) => {
+                    *head.0 = expr(any((var.clone(),)));
+                    head.0.as_mut_any().map(|x| &mut x.0).unwrap()
+                }
+                _ => panic!(),
+            };
+
+            for x in rest {
+                let to_agg = if x.1 == head.1 {
+                    &mut *x.0
+                } else if x.0 == head.1 {
+                    &mut *x.1
+                } else {
+                    continue;
+                };
+
+                match mem::replace(to_agg, Expr::Const(false)) {
+                    Expr::Any(Any(any)) => agg.extend(any),
+                    Expr::Var(var) => agg.push(expr(var.clone())),
+                    other => *to_agg = other,
+                }
+            }
+
+            if agg.len() == 1 {
+                *head.0 = agg.pop().unwrap();
+            }
+        }
+    }
+}
+
+impl VisitMut<Pred> for MergePattern {
+    fn visit_mut_any(&mut self, Any(any_list): &mut Any<Pred>) {
+        Self::merge(any_list);
+        Self::merge(&mut any_list[1..]);
     }
 }
 
