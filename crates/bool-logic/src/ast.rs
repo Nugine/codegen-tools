@@ -247,4 +247,54 @@ impl<T> Expr<T> {
             _ => None,
         }
     }
+
+    pub fn as_mut_not(&mut self) -> Option<&mut Not<T>> {
+        match self {
+            Expr::Not(not) => Some(not),
+            _ => None,
+        }
+    }
+
+    pub fn is_expr_not_var(&self) -> bool {
+        if let Expr::Not(Not(not)) = self {
+            return not.is_var();
+        }
+        false
+    }
+
+    pub fn as_mut_not_any(&mut self) -> Option<&mut Any<T>> {
+        if let Expr::Not(Not(not)) = self {
+            if let Expr::Any(any) = &mut **not {
+                return Some(any);
+            }
+        }
+        None
+    }
+
+    pub fn as_mut_not_all(&mut self) -> Option<&mut All<T>> {
+        if let Expr::Not(Not(not)) = self {
+            if let Expr::All(any) = &mut **not {
+                return Some(any);
+            }
+        }
+        None
+    }
+
+    pub fn is_empty_not_any(&self) -> bool {
+        if let Expr::Not(Not(not)) = self {
+            if let Expr::Any(Any(list)) = &**not {
+                return list.is_empty();
+            }
+        }
+        false
+    }
+
+    pub fn is_empty_not_all(&self) -> bool {
+        if let Expr::Not(Not(not)) = self {
+            if let Expr::All(All(list)) = &**not {
+                return list.is_empty();
+            }
+        }
+        false
+    }
 }

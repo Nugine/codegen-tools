@@ -1,16 +1,11 @@
-use crate::ast::{self, All, Any, Expr, Not};
+use crate::ast::{self, All, Any, Expr, Not, Var};
+use crate::utils::*;
 use crate::visit_mut::*;
 
 use std::ops::Not as _;
-use std::{mem, slice};
+use std::slice;
 
 use rust_utils::iter::map_collect_vec;
-
-fn replace_with<T>(place: &mut T, dummy: T, f: impl FnOnce(T) -> T) {
-    let dummy = mem::replace(place, dummy);
-    let ans = f(dummy);
-    *place = ans;
-}
 
 fn unwrap_not<T>(expr: Expr<T>) -> Expr<T> {
     if let Expr::Not(Not(not)) = expr {
@@ -124,11 +119,6 @@ where
         }
         walk_mut_expr(self, expr);
     }
-}
-
-/// TODO: rust_utils
-fn remove_if<T>(v: &mut Vec<T>, mut f: impl FnMut(&T) -> bool) {
-    v.retain(|x| !f(x))
 }
 
 pub struct EvalConst;
@@ -300,6 +290,46 @@ impl<T> VisitMut<T> for FlattenByDeMorgan {
         }
 
         walk_mut_expr(self, expr)
+    }
+}
+
+pub struct MergeAllOfNotAny;
+
+impl MergeAllOfNotAny {
+    fn as_mut_not_any<T>(expr: &mut Expr<T>) -> Option<&mut Vec<Expr<T>>> {
+        expr.as_mut_not_any().map(|x| &mut x.0)
+    }
+
+    fn unwrap_expr_not_var<T>(expr: Expr<T>) -> Var<T> {
+        if let Expr::Not(Not(not)) = expr {
+            if let Expr::Var(var) = *not {
+                return var;
+            }
+        }
+        panic!()
+    }
+}
+
+impl<T> VisitMut<T> for MergeAllOfNotAny {
+    fn visit_mut_all(&mut self, All(all): &mut All<T>) {
+        let mut not_any_list: Vec<_> = filter_map_collect(&mut *all, Self::as_mut_not_any);
+
+        if let [first, rest @ ..] = not_any_list.as_mut_slice() {
+            if rest.is_empty().not() {
+                rest.iter_mut().for_each(|x| first.append(x));
+                remove_if(all, |x| x.is_empty_not_any())
+            }
+
+            {
+                let not_var_list: Vec<_> = drain_filter(all, |x| x.is_expr_not_var()).collect();
+                let not_any = all.iter_mut().find_map(Self::as_mut_not_any).unwrap();
+
+                for not_var in not_var_list {
+                    let var = Self::unwrap_expr_not_var(not_var);
+                    not_any.push(ast::expr(var));
+                }
+            }
+        }
     }
 }
 
