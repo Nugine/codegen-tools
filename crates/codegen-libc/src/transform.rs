@@ -1,78 +1,80 @@
 use codegen_cfg::ast::*;
 use codegen_cfg::bool_logic::transform::*;
 use codegen_cfg::bool_logic::visit_mut::*;
+use log::debug;
 use rust_utils::iter::filter_map_collect_vec;
 use rust_utils::vec::VecExt;
 
 use std::cmp::Ordering::{self, *};
 use std::mem;
 
-use log::debug;
+use log::trace;
 
 pub fn simplified_expr(x: impl Into<Expr>) -> Expr {
     let mut x = x.into();
 
-    debug!("input: {x}");
+    debug!("input:                              {x}");
 
     UnifyTargetFamily.visit_mut_expr(&mut x);
+    trace!("after  UnifyTargetFamily:           {x}");
 
     for _ in 0..3 {
-        // debug!("before FlattenSingle: {x}");
         FlattenSingle.visit_mut_expr(&mut x);
+        trace!("after  FlattenSingle:               {x}");
 
-        // debug!("before FlattenNestedList: {x}");
         FlattenNestedList.visit_mut_expr(&mut x);
+        trace!("after  FlattenNestedList:           {x}");
 
-        // debug!("before FlattenByDistributive: {x}");
         DedupList.visit_mut_expr(&mut x);
+        trace!("after  DedupList:                   {x}");
 
-        // debug!("before EvalConst: {x}");
         EvalConst.visit_mut_expr(&mut x);
+        trace!("after  EvalConst:                   {x}");
 
-        // debug!("before SimplifyNestedList: {x}");
         SimplifyNestedList.visit_mut_expr(&mut x);
+        trace!("after  SimplifyNestedList:          {x}");
 
-        // debug!("before MergeAllOfNotAny: {x}");
         MergeAllOfNotAny.visit_mut_expr(&mut x);
+        trace!("after  MergeAllOfNotAny:            {x}");
 
-        // debug!("before SimplifyAllNotAny: {x}");
         SimplifyAllNotAny.visit_mut_expr(&mut x);
+        trace!("after  SimplifyAllNotAny:           {x}");
 
-        // debug!("before MergeAllOfAny: {x}");
         MergeAllOfAny.visit_mut_expr(&mut x);
+        trace!("after  MergeAllOfAny:               {x}");
 
-        // debug!("before ImplyByKey: {x}");
         ImplyByKey.visit_mut_expr(&mut x);
+        trace!("after  ImplyByKey:                  {x}");
 
-        // debug!("before SuppressUnix: {x}");
         SuppressTargetFamily.visit_mut_expr(&mut x);
+        trace!("after  SuppressTargetFamily:        {x}");
 
-        // debug!("before EvalConst: {x}");
         EvalConst.visit_mut_expr(&mut x);
+        trace!("after  EvalConst:                   {x}");
 
-        // debug!("before MergePattern: {x}");
         MergePattern.visit_mut_expr(&mut x);
+        trace!("after  MergePattern:                {x}");
 
-        // debug!("before EvalConst: {x}");
         EvalConst.visit_mut_expr(&mut x);
+        trace!("after  EvalConst:                   {x}");
 
-        // debug!("before SimplifyByShortCircuit:      {x}");
         SimplifyByShortCircuit.visit_mut_expr(&mut x);
+        trace!("after  SimplifyByShortCircuit:      {x}");
 
-        // debug!("before EvalConst:                   {x}");
         EvalConst.visit_mut_expr(&mut x);
+        trace!("after  EvalConst:                   {x}");
     }
 
-    // debug!("before SimplifyTargetFamily: {x}");
     SimplifyTargetFamily.visit_mut_expr(&mut x);
+    trace!("after  SimplifyTargetFamily:        {x}");
 
-    // debug!("before SortByPriority: {x}");
     SortByPriority.visit_mut_expr(&mut x);
+    trace!("after  SortByPriority:              {x}");
 
-    // debug!("before SortByValue: {x}");
     SortByValue.visit_mut_expr(&mut x);
+    trace!("after  SortByValue:                 {x}");
 
-    debug!("output: {x}");
+    debug!("output:                             {x}");
 
     x
 }

@@ -35,6 +35,7 @@ pub fn search_items(libc: &Utf8Path, re: &RegexSet) -> Result<Vec<(CfgExpr, Iden
         }
     }
 
+    debug!("aggregating items");
     Ok(aggregate_items(ctx.items))
 }
 
