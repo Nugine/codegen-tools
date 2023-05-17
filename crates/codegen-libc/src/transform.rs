@@ -1,6 +1,7 @@
 use codegen_cfg::ast::*;
 use codegen_cfg::bool_logic::transform::*;
 use codegen_cfg::bool_logic::visit_mut::*;
+use rust_utils::vec::VecExt;
 
 use std::cmp::Ordering::{self, *};
 
@@ -41,10 +42,14 @@ pub fn simplified_expr(x: impl Into<Expr>) -> Expr {
         // debug!("before ImplyByKey: {x}");
         ImplyByKey.visit_mut_expr(&mut x);
 
+        // debug!("before SuppressUnix: {x}");
+        SuppressUnix.visit_mut_expr(&mut x);
+
         // debug!("before EvalConst: {x}");
         EvalConst.visit_mut_expr(&mut x);
     }
 
+    // debug!("before SimplifyTargetFamily: {x}");
     SimplifyTargetFamily.visit_mut_expr(&mut x);
 
     // debug!("before SortByPriority: {x}");
@@ -226,6 +231,45 @@ impl VisitMut<Pred> for ImplyByKey {
             }
             i += 1;
         }
+    }
+}
+
+struct SuppressUnix;
+
+impl SuppressUnix {
+    fn is_target_os_pred(x: &Expr) -> bool {
+        match x {
+            Expr::Var(Var(var)) => var.key == "target_os",
+            _ => false,
+        }
+    }
+
+    fn has_specified_target_os(x: &Expr) -> bool {
+        if Self::is_target_os_pred(x) {
+            return true;
+        }
+
+        if let Expr::Any(Any(any)) = x {
+            return any.iter().all(Self::is_target_os_pred);
+        }
+
+        false
+    }
+}
+
+impl VisitMut<Pred> for SuppressUnix {
+    fn visit_mut_all(&mut self, All(all): &mut All<Pred>) {
+        if all.iter().any(Self::has_specified_target_os) {
+            all.remove_if(|x| {
+                if let Expr::Var(Var(var)) = x {
+                    var.key == "target_family" && var.value.as_deref() == Some("unix")
+                } else {
+                    false
+                }
+            })
+        }
+
+        walk_mut_expr_list(self, all)
     }
 }
 
