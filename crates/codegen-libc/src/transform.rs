@@ -68,9 +68,9 @@ struct SortByPriority;
 impl SortByPriority {
     fn get_priority(x: &Expr) -> Option<u32> {
         Some(match x {
-            Expr::Not(_) => 101,
-            Expr::Any(_) => 102,
-            Expr::All(_) => 103,
+            Expr::Not(_) => 103,
+            Expr::Any(_) => 101,
+            Expr::All(_) => 102,
             Expr::Var(Var(pred)) => match pred.key.as_str() {
                 "target_family" => 1,
                 "target_arch" => 2,
