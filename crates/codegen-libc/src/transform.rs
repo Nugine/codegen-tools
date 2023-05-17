@@ -45,7 +45,7 @@ pub fn simplified_expr(x: impl Into<Expr>) -> Expr {
         ImplyByKey.visit_mut_expr(&mut x);
 
         // debug!("before SuppressUnix: {x}");
-        SuppressUnix.visit_mut_expr(&mut x);
+        SuppressTargetFamily.visit_mut_expr(&mut x);
 
         // debug!("before EvalConst: {x}");
         EvalConst.visit_mut_expr(&mut x);
@@ -242,9 +242,9 @@ impl VisitMut<Pred> for ImplyByKey {
     }
 }
 
-struct SuppressUnix;
+struct SuppressTargetFamily;
 
-impl SuppressUnix {
+impl SuppressTargetFamily {
     fn is_target_os_pred(x: &Expr) -> bool {
         match x {
             Expr::Var(Var(var)) => var.key == "target_os",
@@ -263,17 +263,27 @@ impl SuppressUnix {
 
         false
     }
+
+    #[allow(clippy::match_like_matches_macro)]
+    fn is_suppressed_target_family(pred: &Pred) -> bool {
+        match (pred.key.as_str(), pred.value.as_deref()) {
+            ("target_family", Some("unix")) => true,
+            ("target_family", Some("windows")) => true,
+            _ => false,
+        }
+    }
 }
 
-impl VisitMut<Pred> for SuppressUnix {
+impl VisitMut<Pred> for SuppressTargetFamily {
     fn visit_mut_all(&mut self, All(all): &mut All<Pred>) {
         if all.iter().any(Self::has_specified_target_os) {
-            all.remove_if(|x| {
-                if let Expr::Var(Var(var)) = x {
-                    var.key == "target_family" && var.value.as_deref() == Some("unix")
-                } else {
-                    false
-                }
+            all.remove_if(|x| match x {
+                Expr::Var(Var(pred)) => Self::is_suppressed_target_family(pred),
+                Expr::Not(Not(not)) => match &**not {
+                    Expr::Var(Var(pred)) => Self::is_suppressed_target_family(pred),
+                    _ => false,
+                },
+                _ => false,
             })
         }
 
