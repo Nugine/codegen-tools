@@ -35,6 +35,9 @@ pub fn simplified_expr(x: impl Into<Expr>) -> Expr {
         // debug!("before SimplifyAllNotAny: {x}");
         SimplifyAllNotAny.visit_mut_expr(&mut x);
 
+        // debug!("before MergeAllOfAny: {x}");
+        MergeAllOfAny.visit_mut_expr(&mut x);
+
         // debug!("before EvalConst: {x}");
         EvalConst.visit_mut_expr(&mut x);
     }

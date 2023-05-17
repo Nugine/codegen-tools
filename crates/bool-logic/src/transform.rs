@@ -7,6 +7,7 @@ use std::slice;
 
 use replace_with::replace_with_or_abort as replace_with;
 use rust_utils::iter::{filter_map_collect, map_collect_vec};
+use rust_utils::slice::SliceExt;
 use rust_utils::vec::VecExt;
 
 fn unwrap_not<T>(expr: Expr<T>) -> Expr<T> {
@@ -329,6 +330,33 @@ impl<T> VisitMut<T> for MergeAllOfNotAny {
                 for not_var in not_var_list {
                     let var = Self::unwrap_expr_not_var(not_var);
                     not_any.push(ast::expr(var));
+                }
+            }
+        }
+    }
+}
+
+pub struct MergeAllOfAny;
+
+impl MergeAllOfAny {
+    fn is_subset_of<T: Eq>(lhs: &[Expr<T>], rhs: &[Expr<T>]) -> bool {
+        lhs.iter().all(|x| rhs.contains(x))
+    }
+}
+
+impl<T: Eq> VisitMut<T> for MergeAllOfAny {
+    fn visit_mut_all(&mut self, All(all): &mut All<T>) {
+        walk_mut_expr_list(self, all);
+
+        let mut any_list: Vec<_> = filter_map_collect(&mut *all, |x| Expr::as_mut_any(x).map(|x| &mut x.0));
+
+        for i in 0..any_list.len() {
+            for j in 0..any_list.len() {
+                if let Some((lhs, rhs)) = any_list.get2_mut(i, j) {
+                    if Self::is_subset_of(lhs, rhs) {
+                        rhs.clear();
+                        rhs.push(Expr::Const(true));
+                    }
                 }
             }
         }
