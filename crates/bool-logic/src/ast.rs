@@ -234,6 +234,13 @@ impl<T> Expr<T> {
         matches!(self, Self::Const(false))
     }
 
+    pub fn as_var(&self) -> Option<&Var<T>> {
+        match self {
+            Expr::Var(var) => Some(var),
+            _ => None,
+        }
+    }
+
     pub fn as_mut_any(&mut self) -> Option<&mut Any<T>> {
         match self {
             Expr::Any(any) => Some(any),

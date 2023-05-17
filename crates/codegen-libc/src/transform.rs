@@ -55,6 +55,12 @@ pub fn simplified_expr(x: impl Into<Expr>) -> Expr {
 
         // debug!("before EvalConst: {x}");
         EvalConst.visit_mut_expr(&mut x);
+
+        // debug!("before SimplifyByShortCircuit:      {x}");
+        SimplifyByShortCircuit.visit_mut_expr(&mut x);
+
+        // debug!("before EvalConst:                   {x}");
+        EvalConst.visit_mut_expr(&mut x);
     }
 
     // debug!("before SimplifyTargetFamily: {x}");

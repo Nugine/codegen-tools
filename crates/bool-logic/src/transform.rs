@@ -6,6 +6,7 @@ use std::ops::Not as _;
 use std::slice;
 
 use replace_with::replace_with_or_abort as replace_with;
+use rust_utils::default::default;
 use rust_utils::iter::{filter_map_collect, map_collect_vec};
 use rust_utils::slice::SliceExt;
 use rust_utils::vec::VecExt;
@@ -360,6 +361,60 @@ impl<T: Eq> VisitMut<T> for MergeAllOfAny {
                 }
             }
         }
+    }
+}
+
+pub struct SimplifyByShortCircuit;
+
+impl SimplifyByShortCircuit {
+    fn find_vars<T: Eq + Clone>(list: &mut [Expr<T>], marker: bool) -> Vec<Var<T>> {
+        let mut ans: Vec<Var<T>> = default();
+        for x in list {
+            if let Expr::Var(var) = x {
+                if ans.contains(var) {
+                    *x = Expr::Const(marker);
+                } else {
+                    ans.push(var.clone())
+                }
+            }
+        }
+        ans
+    }
+
+    fn replace_vars<T: Eq>(x: &mut Expr<T>, vars: &[Var<T>], marker: bool) {
+        match x {
+            Expr::Any(Any(any)) => any.iter_mut().for_each(|x| Self::replace_vars(x, vars, marker)),
+            Expr::All(All(all)) => all.iter_mut().for_each(|x| Self::replace_vars(x, vars, marker)),
+            Expr::Not(Not(not)) => Self::replace_vars(not, vars, marker),
+            Expr::Var(var) => {
+                if vars.contains(var) {
+                    *x = Expr::Const(marker);
+                }
+            }
+            Expr::Const(_) => {}
+        }
+    }
+}
+
+impl<T: Eq + Clone> VisitMut<T> for SimplifyByShortCircuit {
+    fn visit_mut_any(&mut self, Any(any): &mut Any<T>) {
+        let marker = false;
+        let vars = Self::find_vars(any, marker);
+        for x in any.iter_mut().filter(|x| x.is_var().not()) {
+            Self::replace_vars(x, &vars, marker);
+        }
+
+        walk_mut_expr_list(self, any)
+    }
+
+    fn visit_mut_all(&mut self, All(all): &mut All<T>) {
+        let marker = true;
+        let vars = Self::find_vars(all, marker);
+        for x in all.iter_mut().filter(|x| x.is_var().not()) {
+            Self::replace_vars(x, &vars, marker);
+        }
+
+        walk_mut_expr_list(self, all)
     }
 }
 
