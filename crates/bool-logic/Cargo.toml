@@ -7,4 +7,5 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
-nugine-rust-utils = "0.2.0"
+nugine-rust-utils = "0.2.1"
+replace_with = "0.1.7"

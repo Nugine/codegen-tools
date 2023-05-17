@@ -5,7 +5,9 @@ use crate::visit_mut::*;
 use std::ops::Not as _;
 use std::slice;
 
-use rust_utils::iter::map_collect_vec;
+use replace_with::replace_with_or_abort as replace_with;
+use rust_utils::iter::{filter_map_collect, map_collect_vec};
+use rust_utils::vec::VecExt;
 
 fn unwrap_not<T>(expr: Expr<T>) -> Expr<T> {
     if let Expr::Not(Not(not)) = expr {
@@ -38,7 +40,7 @@ impl<T> VisitMut<T> for FlattenSingle {
             }
             Expr::Not(Not(not_expr)) => {
                 if not_expr.is_not() {
-                    replace_with(expr, Expr::Const(false), |expr| unwrap_not(unwrap_not(expr)))
+                    replace_with(expr, |expr| unwrap_not(unwrap_not(expr)))
                 }
             }
             _ => {}
@@ -125,7 +127,7 @@ pub struct EvalConst;
 
 impl EvalConst {
     fn eval_any<T>(any: &mut Vec<Expr<T>>) -> Option<bool> {
-        remove_if(any, |expr| expr.is_const_false());
+        any.remove_if(|expr| expr.is_const_false());
 
         if any.is_empty() {
             return Some(false);
@@ -139,7 +141,7 @@ impl EvalConst {
     }
 
     fn eval_all<T>(all: &mut Vec<Expr<T>>) -> Option<bool> {
-        remove_if(all, |expr| expr.is_const_true());
+        all.remove_if(|expr| expr.is_const_true());
 
         if all.is_empty() {
             return Some(true);
@@ -317,7 +319,7 @@ impl<T> VisitMut<T> for MergeAllOfNotAny {
         if let [first, rest @ ..] = not_any_list.as_mut_slice() {
             if rest.is_empty().not() {
                 rest.iter_mut().for_each(|x| first.append(x));
-                remove_if(all, |x| x.is_empty_not_any())
+                all.remove_if(|x| x.is_empty_not_any())
             }
 
             {
