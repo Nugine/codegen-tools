@@ -1,4 +1,4 @@
-use codegen_cfg::ast::{flag, Expr, Not, Pred, Var};
+use codegen_cfg::ast::{flag, key_value, Expr, Not, Pred, Var};
 use codegen_cfg::bool_logic::transform::*;
 use codegen_cfg::bool_logic::visit_mut::*;
 
@@ -29,12 +29,17 @@ pub fn simplified_expr(x: impl Into<Expr>) -> Expr {
         // debug!("before SimplifyNestedList: {x}");
         SimplifyNestedList.visit_mut_expr(&mut x);
 
+        // debug!("before MergeAllOfNotAny: {x}");
+        MergeAllOfNotAny.visit_mut_expr(&mut x);
+
         // debug!("before SimplifyAllNotAny: {x}");
         SimplifyAllNotAny.visit_mut_expr(&mut x);
 
         // debug!("before EvalConst: {x}");
         EvalConst.visit_mut_expr(&mut x);
     }
+
+    SimplifyTargetFamily.visit_mut_expr(&mut x);
 
     // debug!("before SortByPriority: {x}");
     SortByPriority.visit_mut_expr(&mut x);
@@ -62,7 +67,7 @@ impl SortByPriority {
                 "target_os" => 4,
                 "target_env" => 5,
                 "target_pointer_width" => 6,
-                _ => return None,
+                _ => 0,
             },
             Expr::Const(_) => panic!(),
         })
@@ -123,13 +128,36 @@ struct UnifyTargetFamily;
 
 impl VisitMut<Pred> for UnifyTargetFamily {
     fn visit_mut_var(&mut self, Var(pred): &mut Var<Pred>) {
-        if pred.key == "target_famiy" {
+        if pred.value.is_none() && matches!(pred.key.as_str(), "unix" | "windows" | "wasm") {
+            *pred = key_value("target_family", pred.key.as_str());
+        }
+    }
+}
+
+struct SimplifyTargetFamily;
+
+impl VisitMut<Pred> for SimplifyTargetFamily {
+    fn visit_mut_var(&mut self, Var(pred): &mut Var<Pred>) {
+        if pred.key == "target_family" {
             if let Some(value) = pred.value.as_deref() {
-                match value {
-                    "unix" | "windows" | "wasm" => *pred = flag(value),
-                    _ => {}
+                if matches!(value, "unix" | "windows" | "wasm") {
+                    *pred = flag(value);
                 }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use codegen_cfg::ast::*;
+
+    #[test]
+    fn sort() {
+        let mut expr = expr(all((not(flag("unix")), flag("unix"))));
+        SortByPriority.visit_mut_expr(&mut expr);
+        assert_eq!(expr.to_string(), "all(unix, not(unix))");
     }
 }
