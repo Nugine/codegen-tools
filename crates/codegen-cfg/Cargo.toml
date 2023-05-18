@@ -1,6 +1,6 @@
 [package]
 name = "codegen-cfg"
-version = "0.1.4-dev"
+version = "0.2.0"
 edition = "2021"
 description = "A codegen tool for Rust `cfg` expressions"
 license.workspace = true
@@ -11,4 +11,4 @@ nugine-rust-utils = { version = "0.2.1", features = ["std"] }
 
 [dependencies.bool-logic]
 path = "../bool-logic"
-version = "0.1.4-dev"
+version = "0.2.0"
