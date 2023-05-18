@@ -21,7 +21,21 @@ use regex::RegexSet;
 use rust_utils::default::default;
 use rust_utils::iter::map_collect_vec;
 
-pub fn search_items(libc: &Utf8Path, re: &RegexSet) -> Result<Vec<(CfgExpr, Ident)>> {
+pub struct CfgItem {
+    pub cfg: CfgExpr,
+    pub name: String,
+}
+
+pub fn search(libc: impl AsRef<Utf8Path>, re: &RegexSet) -> Result<Vec<CfgItem>> {
+    let items = search_items(libc.as_ref(), re)?;
+
+    Ok(map_collect_vec(items, |(cfg, name)| CfgItem {
+        cfg,
+        name: name.to_string(),
+    }))
+}
+
+fn search_items(libc: &Utf8Path, re: &RegexSet) -> Result<Vec<(CfgExpr, Ident)>> {
     let mut ctx = DfsContext { re, items: default() };
 
     {
