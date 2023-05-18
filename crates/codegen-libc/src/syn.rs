@@ -206,7 +206,9 @@ impl Parse for CfgIfBranch {
 
         assert!(attr.meta.path().is_ident("cfg"));
 
-        let cfg = attr.meta.require_list()?.tokens.clone();
+        let cfg = &attr.meta.require_list()?.tokens;
+        let cfg = quote! { all(#cfg) };
+
         let block: Block = input.parse()?;
 
         Ok(Self { cfg, block })
@@ -248,7 +250,7 @@ fn parse_cfg(tokens: &TokenStream) -> CfgExpr {
     match result {
         Ok(expr) => expr,
         Err(e) => panic!(
-            "ill-formed cfg: {}, input = {:?}\nerror backtrace:\n{}\n\n",
+            "ill-formed cfg: tokens = {tokens:?}, e.location = {}, e.input = {:?}\nerror backtrace:\n{}\n\n",
             e.location, e.input, e.backtrace
         ),
     }
