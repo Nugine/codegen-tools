@@ -3,6 +3,7 @@ use codegen_cfg::bool_logic::transform::*;
 use codegen_cfg::bool_logic::visit_mut::*;
 use log::debug;
 use rust_utils::iter::filter_map_collect_vec;
+use rust_utils::iter::map_collect_vec;
 use rust_utils::vec::VecExt;
 
 use std::cmp::Ordering::{self, *};
@@ -187,38 +188,35 @@ impl ImplyByKey {
         "target_pointer_width",
     ];
 
-    fn fix_all(pos: &Pred, all: &mut [Expr]) {
-        let pos_key = pos.key.as_str();
-        let pos_value = pos.value.as_deref().unwrap();
-
-        let fix = |x: &mut Expr| {
-            if let Expr::Var(Var(var)) = x {
-                if var.key == pos_key {
-                    let var_value = var.value.as_deref().unwrap();
-                    *x = Expr::Const(var_value == pos_value)
-                }
-            }
-        };
-
-        for expr in all {
-            if let Expr::Not(Not(x)) = expr {
-                if let Expr::Any(Any(not_any)) = &mut **x {
-                    not_any.iter_mut().for_each(fix);
-                } else {
-                    fix(x);
-                }
-            }
-        }
+    fn is_expr_any_pred(any: &[Expr], key: &str) -> bool {
+        any.iter().all(|x| x.as_var().map_or(false, |Var(var)| var.key == key))
     }
 
-    fn is_expr_any_pred(any: &[Expr], key: &str) -> bool {
-        any.iter().all(|x| {
-            if let Expr::Var(Var(var)) = x {
-                var.key == key
-            } else {
-                false
+    fn fix(pos_key: &str, pos_any_values: &[&str], expr: &mut Expr) {
+        match expr {
+            Expr::Any(Any(any)) => {
+                any.iter_mut().for_each(|x| Self::fix(pos_key, pos_any_values, x));
             }
-        })
+            Expr::All(All(all)) => {
+                all.iter_mut().for_each(|x| Self::fix(pos_key, pos_any_values, x));
+            }
+            Expr::Not(Not(not)) => {
+                Self::fix(pos_key, pos_any_values, not);
+            }
+            Expr::Var(Var(var)) => {
+                if var.key == pos_key {
+                    let var_value = var.value.as_deref().unwrap();
+                    if pos_any_values.contains(&var_value) {
+                        if pos_any_values.len() == 1 {
+                            *expr = Expr::Const(true)
+                        }
+                    } else {
+                        *expr = Expr::Const(false)
+                    }
+                }
+            }
+            Expr::Const(_) => {}
+        }
     }
 }
 
@@ -232,14 +230,23 @@ impl VisitMut<Pred> for ImplyByKey {
                 Expr::Var(Var(pos)) => {
                     if Self::UNIQUE_VALUED_KEYS.contains(&pos.key.as_str()) {
                         assert!(pos.value.is_some());
-                        Self::fix_all(&pos.clone(), all);
+
+                        let pos = pos.clone();
+                        let pos_key = pos.key.as_str();
+                        let pos_any_values = &[pos.value.as_deref().unwrap()];
+
+                        for (_, x) in all.iter_mut().enumerate().filter(|&(j, _)| j != i) {
+                            Self::fix(pos_key, pos_any_values, x);
+                        }
                     }
                 }
                 Expr::Any(Any(any)) => {
-                    if Self::UNIQUE_VALUED_KEYS.iter().any(|k| Self::is_expr_any_pred(any, k)) {
-                        for x in any.clone() {
-                            let Expr::Var(Var(pos)) = x else { panic!() };
-                            Self::fix_all(&pos, all)
+                    if let Some(pos_key) = Self::UNIQUE_VALUED_KEYS.iter().find(|k| Self::is_expr_any_pred(any, k)) {
+                        let any = any.clone();
+                        let pos_any_values = map_collect_vec(&any, |x| x.as_var().unwrap().0.value.as_deref().unwrap());
+
+                        for (_, x) in all.iter_mut().enumerate().filter(|&(j, _)| j != i) {
+                            Self::fix(pos_key, &pos_any_values, x);
                         }
                     }
                 }
@@ -358,8 +365,6 @@ impl VisitMut<Pred> for MergePattern {
 mod tests {
     use super::*;
 
-    use codegen_cfg::parsing::parse;
-
     #[test]
     fn sort() {
         let mut expr = expr(all((not(flag("unix")), flag("unix"))));
@@ -369,9 +374,21 @@ mod tests {
 
     #[test]
     fn imply() {
-        let s = r#"  all(target_os = "linux", not(target_os = "emscripten"))  "#;
-        let mut expr = parse(s).unwrap();
-        ImplyByKey.visit_mut_expr(&mut expr);
-        assert_eq!(expr.to_string(), r#"all(target_os = "linux", not(false))"#)
+        {
+            let mut expr = expr(all((target_os("linux"), not(target_os("emscripten")))));
+            ImplyByKey.visit_mut_expr(&mut expr);
+            assert_eq!(expr.to_string(), r#"all(target_os = "linux", not(false))"#)
+        }
+        {
+            let mut expr = expr(all((
+                any((target_os("ios"), target_os("macos"))),     //
+                any((target_os("linux"), target_os("android"))), //
+            )));
+            ImplyByKey.visit_mut_expr(&mut expr);
+            assert_eq!(
+                expr.to_string(),
+                r#"all(any(target_os = "ios", target_os = "macos"), any(false, false))"#
+            );
+        }
     }
 }
