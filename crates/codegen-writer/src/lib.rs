@@ -79,14 +79,11 @@ macro_rules! g {
 
 #[macro_export]
 macro_rules! glines {
-    [$($line:expr),+] => {{
-        g![$($line,)+]
-    }};
-    [$($line:expr,)+] => {{
+    [$($line:literal)+] => {{
         use ::std::io::Write;
         $crate::with(|g| {
             $(
-                let line = $line;
+                let line: &str = $line;
                 writeln!(g, "{line}").unwrap();
             )+
         });
